@@ -50,7 +50,7 @@ create table if not exists messages (
   edited boolean default false,
   deleted_msg boolean default false,
   hidden_by text[] default array[]::text[],
-  reactions jsonb default '{}'::jsonb
+  reaction text default null
 );
 
 -- GROUPS
@@ -61,7 +61,8 @@ create table if not exists groups (
   created_by text not null,
   created bigint not null,
   deleted boolean default false,
-  permanent boolean default false
+  permanent boolean default false,
+  group_type text default null
 );
 
 -- SECURITY VIOLATIONS LOG
@@ -125,3 +126,9 @@ values (
   array['Files','Console','Websites','Tutors','Messages','Lookup','Admin'],
   false, false, false, false, false
 ) on conflict (username) do nothing;
+
+-- ============================================================
+-- If tables already exist, run these to add missing columns:
+-- ============================================================
+alter table messages add column if not exists reaction text default null;
+alter table groups add column if not exists group_type text default null;

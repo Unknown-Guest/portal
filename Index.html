@@ -398,6 +398,7 @@ window.addEventListener('unhandledrejection', function(e) {
   </div>
 </div>
 
+<script src="scp_supabase.js"></script>
 <script>
 'use strict';
 
@@ -567,29 +568,32 @@ async function sendRegistrationRequest() {
 
     let role = 'student', initialGrade = null, gradeYear = null;
     if (isTeacher) {
-        const code = localStorage.getItem('scpTeacherCode');
+        const code = await dbGetSetting('teacher_code');
         if (!code) { showError('Teacher registration is not yet configured. Contact an admin.'); return; }
         if (teacherCode !== code) { showError('Incorrect teacher code.'); return; }
         role = 'teacher';
     } else if (gradeVal) { initialGrade = parseInt(gradeVal); gradeYear = new Date().getFullYear(); }
 
-    const pending  = xJRcoreogr('pendingAccounts',  []);
-    const approved = xJRcoreogr('approvedAccounts', []);
-    if (pending.some(a => a.username.toLowerCase() === username.toLowerCase()) ||
-        approved.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+    // Check username availability in Supabase
+    showStatus('Checking availability...');
+    const [existingAccount, existingPending] = await Promise.all([
+        dbGetAccount(username),
+        dbGetPending()
+    ]);
+    if (existingAccount || existingPending.some(p => p.username.toLowerCase() === username.toLowerCase())) {
         showError('This username is already taken.'); return;
     }
 
-    let deleted = xJRcoreogr('deletedAccounts', []);
-    if (deleted.some(d => d.username.toLowerCase() === username.toLowerCase())) {
-        OZkwPRQeNH('deletedAccounts', deleted.filter(d => d.username.toLowerCase() !== username.toLowerCase()));
-    }
-
     const hashedPw = await hashPassword(password);
-    pending.push({ name, username, email: (isRestricted || isTeacher) ? '' : email, password: hashedPw, role, initialGrade, gradeYear });
-    OZkwPRQeNH('pendingAccounts', pending);
-    showStatus('processing...');
-    setTimeout(() => { showStatus('processing complete'); _resetForm(); }, 1200);
+    await dbAddPending({
+        username, name,
+        email: (isRestricted || isTeacher) ? '' : email,
+        password: hashedPw, role,
+        initial_grade: initialGrade, grade_year: gradeYear,
+        requested_at: Date.now()
+    });
+    showStatus('Request sent! Waiting for admin approval.');
+    setTimeout(() => { _resetForm(); }, 1800);
 }
 
 function _resetForm() {
@@ -616,57 +620,32 @@ async function authLogin() {
     if (!username || !password) { showError('Please enter your username and password.'); return; }
     if (password.length < 5) { showError('Minimum 5 characters required.'); return; }
 
-    const accounts = xJRcoreogr('approvedAccounts', []);
-    let deleted = xJRcoreogr('deletedAccounts', []);
-    const approved = accounts.some(a => a.username.toLowerCase() === username.toLowerCase());
+    showStatus('Checking credentials...');
+    const match = await dbGetAccount(username);
 
-    if (!approved) {
-        const del = deleted.find(d => d.username.toLowerCase() === username.toLowerCase());
-        if (del) {
-            del.attempts = (del.attempts || 0) + 1;
-            if (del.attempts >= 3) {
-                OZkwPRQeNH('deletedAccounts', deleted.filter(d => d.username.toLowerCase() !== username.toLowerCase()));
-                showError('Account permanently removed after too many attempts.'); return;
-            }
-            OZkwPRQeNH('deletedAccounts', deleted);
-            const left = 3 - del.attempts;
-            showError('Your account has been deleted.' + (left > 0 ? ' (' + left + ' attempt' + (left !== 1 ? 's' : '') + ' left)' : '')); return;
-        }
-    }
-
-    const hashedInput = await hashPassword(password);
-    let match = accounts.find(a =>
-        a.username.toLowerCase() === username.toLowerCase() &&
-        (a.password === hashedInput || a.password === password)
-    );
-
-    if (!match) { recordFailedAttempt(); return; }
-
-    // Check if account is suspended due to a security violation
+    if (!match) { showError('No account found with that username.'); recordFailedAttempt(); return; }
+    if (match.deleted) { showError('Your account has been deleted. Contact an admin.'); return; }
     if (match.suspended) {
         showError('⛔ Your account has been suspended due to a security violation. Contact an admin to reactivate it.');
         return;
     }
 
-    // Upgrade plaintext password on successful login
-    if (match.password === password && match.password !== hashedInput) {
-        match.password = hashedInput;
-        OZkwPRQeNH('approvedAccounts', accounts);
-    }
+    const hashedInput = await hashPassword(password);
+    if (match.password !== hashedInput) { recordFailedAttempt(); return; }
 
     clearAttempts();
 
-    // Generate session token
+    // Cache access + role so nav buttons work without a DB call on every page
+    localStorage.setItem('_scp_access', JSON.stringify(match.access || []));
+    localStorage.setItem('_scp_role', match.role || 'student');
+
     const token = crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
     sessionStorage.setItem('_scp_st', token);
     sessionStorage.setItem('_scp_su', match.username);
 
-    showStatus('processing...');
-    setTimeout(() => {
-        showStatus('Login successful');
-        localStorage.setItem('loggedInUser', match.username);
-        setTimeout(() => { window.location.href = 'home.html'; }, 600);
-    }, 1200);
+    localStorage.setItem('loggedInUser', match.username);
+    showStatus('Login successful');
+    setTimeout(() => { window.location.href = 'home.html'; }, 700);
 }
 
 // ── SEED RESTRICTED & INIT ────────────────────────────────────────────────────

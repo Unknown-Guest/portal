@@ -275,76 +275,14 @@ window.addEventListener('unhandledrejection', function(e) {
 </script>
 
 
-<script>
-/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+<script>/* ── SESSION GUARD ──────────────────────────────────────────────────────────── */
 (function(){
-    // Valid access values only
-    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
-    var VALID_ROLES = ['student','teacher'];
+    function _guard(){ var u=localStorage.getItem('loggedInUser'),t=sessionStorage.getItem('_scp_st'); if(u&&!t){localStorage.removeItem('loggedInUser');window.location.href='Index.html';} }
+    document.readyState==='loading'?document.addEventListener('DOMContentLoaded',_guard):_guard();
+})();</script>
 
-    function _guardRole() {
-        try {
-            var user = localStorage.getItem('loggedInUser');
-            if (!user) return;
-            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
-            if (!me) return;
-
-            var changed = false;
-
-            // Strip any invalid role
-            if (!VALID_ROLES.includes(me.role)) {
-                // Illegal role — strip admin-like access
-                me.role = 'student';
-                changed = true;
-            }
-
-            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
-            if (me.access && !me.username.toLowerCase().includes('restricted')) {
-                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
-                if (filteredAccess.length !== me.access.length) {
-                    me.access = filteredAccess;
-                    changed = true;
-                }
-            }
-
-            if (changed) {
-                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
-                // Update integrity
-                try {
-                    var d = localStorage.getItem('approvedAccounts') || '[]';
-                    var h = 5381;
-                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
-                    localStorage.setItem('_ic', (h >>> 0).toString(36));
-                } catch(e) {}
-            }
-        } catch(e) {}
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _guardRole);
-    } else {
-        _guardRole();
-    }
-})();
-</script>
-
-<script>
-// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
-(function(){
-    var user = localStorage.getItem('loggedInUser');
-    if (!user) return;
-    try {
-        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
-        if (me && me.suspended) {
-            localStorage.removeItem('loggedInUser');
-            sessionStorage.clear();
-            window.location.href = 'Index.html';
-        }
-    } catch(e) {}
-})();
-</script>
+<script>// ── SUSPENDED CHECK ───────────────────────────────────────────────────────────
+(function(){ var u=localStorage.getItem('loggedInUser'),t=sessionStorage.getItem('_scp_st'); if(u&&!t){localStorage.removeItem('loggedInUser');window.location.href='Index.html';} })();</script>
 
 <script>
 /* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
@@ -509,7 +447,6 @@ window.addEventListener('unhandledrejection', function(e) {
 })();
 </script>
 
-<script src="db.js"></script>
 </head>
 <body>
 
@@ -629,35 +566,20 @@ if (document.readyState === 'loading') {
     <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
     <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
 
-<script>
-/* admin-nav-show */
+<script>/* admin-nav-show */
 (function(){
-  var u=localStorage.getItem('loggedInUser');
-  if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
-  var isR=u.toLowerCase()==='restricted';
-  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
-})();
-</script>
+  var u=localStorage.getItem('loggedInUser');if(!u)return;
+  var a=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  if(a.includes('Admin')||u.toLowerCase()==='restricted'){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();</script>
 
-<script>
-/* lookup-nav-show-injected Show LOOKUP nav button for teachers, admins, and Restricted */
+<script>/* lookup-nav-show */
 (function(){
-  var u = localStorage.getItem('loggedInUser');
-  if (!u) return;
-  var a = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-  var me = a.find(function(x){ return x.username && x.username.toLowerCase() === u.toLowerCase(); });
-  var isT = me && me.role === 'teacher';
-  var isA = me && Array.isArray(me.access) && me.access.includes('Admin');
-  var isR = u.toLowerCase() === 'restricted';
-  if (isT || isA || isR) {
-    var b = document.getElementById('lookup-nav-btn');
-    if (b) b.style.display = '';
-  }
-})();
-</script>
+  var u=localStorage.getItem('loggedInUser');if(!u)return;
+  var a=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var r=localStorage.getItem('_scp_role')||'student';
+  if(r==='teacher'||a.includes('Admin')||u.toLowerCase()==='restricted'){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
+})();</script>
 </div>
 
 <div id="main">
@@ -771,7 +693,7 @@ if (document.readyState === 'loading') {
     <div class="modal-box danger">
         <div class="modal-title red">⚠ PERMANENTLY DELETE</div>
         <p class="modal-info">This message will be permanently deleted and cannot be recovered.</p>
-        <button class="modal-btn-danger" onclick="KlcBGYQ6Tm()">✕ DELETE FOREVER</button>
+        <button class="modal-btn-danger" onclick="permanentDeleteMsg()">✕ DELETE FOREVER</button>
         <button class="modal-btn-secondary" onclick="closeModal('perma-msg-modal')">◀ CANCEL</button>
     </div>
 </div>
@@ -781,7 +703,7 @@ if (document.readyState === 'loading') {
     <div class="modal-box danger">
         <div class="modal-title red">⚠ DELETE FOREVER</div>
         <p class="modal-info">This will permanently delete the entire conversation and cannot be undone.</p>
-        <button class="modal-btn-danger" onclick="BePut0Sstz()">✕ DELETE FOREVER</button>
+        <button class="modal-btn-danger" onclick="confirmPermaDel()">✕ DELETE FOREVER</button>
         <button class="modal-btn-secondary" onclick="closeModal('perma-conv-modal')">◀ CANCEL</button>
     </div>
 </div>
@@ -808,7 +730,7 @@ if (document.readyState === 'loading') {
     </div>
 </div>
 
-<script>
+<script>// ── STATE ────────────────────────────────────────────────────────────────────
 let currentUser = "";
 let isAdmin = false;
 let activeConv = null;
@@ -820,1116 +742,739 @@ let permaConvTarget = null;
 let pendingGroupMembers = [];
 let pendingFile = null;
 let msgPendingConfirm = null;
+let _allAccounts = [];   // cache fetched accounts for user lookup
+let _pollTimer = null;
+let _lastMsgTimestamp = 0;
 
-function openMsgAlert(title, message) {
-    document.getElementById('msg-alert-title').innerText = title || 'Notice';
-    document.getElementById('msg-alert-body').innerText = message || '';
-    document.getElementById('msg-alert-modal').style.display = "flex";
+// ── MODALS ────────────────────────────────────────────────────────────────────
+function openMsgAlert(title, msg) {
+    document.getElementById('msg-alert-title').innerText = title||'Notice';
+    document.getElementById('msg-alert-body').innerText = msg||'';
+    document.getElementById('msg-alert-modal').style.display='flex';
 }
-
-function closeMsgAlert() {
-    document.getElementById('msg-alert-modal').style.display = "none";
+function closeMsgAlert(){ document.getElementById('msg-alert-modal').style.display='none'; }
+function openMsgConfirm(title, msg, onYes){
+    msgPendingConfirm = typeof onYes==='function'?onYes:null;
+    document.getElementById('msg-confirm-title').innerText = title||'Confirm';
+    document.getElementById('msg-confirm-body').innerText = msg||'';
+    document.getElementById('msg-confirm-modal').style.display='flex';
 }
+function closeMsgConfirm(){ document.getElementById('msg-confirm-modal').style.display='none'; msgPendingConfirm=null; }
+function msgConfirmYes(){ const fn=msgPendingConfirm; closeMsgConfirm(); if(fn)fn(); }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
 
-function openMsgConfirm(title, message, onYes) {
-    msgPendingConfirm = typeof onYes === 'function' ? onYes : null;
-    document.getElementById('msg-confirm-title').innerText = title || 'Confirm';
-    document.getElementById('msg-confirm-body').innerText = message || '';
-    document.getElementById('msg-confirm-modal').style.display = "flex";
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function escapeHtml(str){
+    if(!str)return'';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 }
-
-function closeMsgConfirm() {
-    document.getElementById('msg-confirm-modal').style.display = "none";
-    msgPendingConfirm = null;
-}
-
-function msgConfirmYes() {
-    const fn = msgPendingConfirm;
-    closeMsgConfirm();
-    if (fn) fn();
+function formatTime(ts){
+    const d=new Date(ts),now=new Date();
+    return d.toDateString()===now.toDateString()
+        ? d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+        : d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
 
 // ── SWEAR FILTER ──────────────────────────────────────────────────────────────
-const SWEAR_WORDS = ['fuck','shit','ass','bitch','bastard','crap','piss','dick','cock','pussy','cunt','whore','slut','fag','faggot','bollocks','wanker','twat','arse','prick','nigger','nigga','retard'];
-function censorText(text) {
-    let out = text;
-    SWEAR_WORDS.forEach(w => {
-        const rx = new RegExp('\\b' + w + '(?:s|ed|ing|er)?' + '\\b', 'gi');
-        out = out.replace(rx, m => '*'.repeat(m.length));
+const SWEAR_WORDS=['fuck','shit','ass','bitch','bastard','crap','piss','dick','cock','pussy','cunt','whore','slut','fag','faggot','bollocks','wanker','twat','arse','prick','nigger','nigga','retard'];
+function censorText(text){
+    let out=text;
+    SWEAR_WORDS.forEach(w=>{
+        const rx=new RegExp('\\b'+w+'(?:s|ed|ing|er)?\\b','gi');
+        out=out.replace(rx,m=>'*'.repeat(m.length));
     });
     return out;
 }
 
-// ── NAME DISPLAY ──────────────────────────────────────────────────────────────
-function getDisplayName(username) {
-    // Everyone always sees real usernames
-    return username;
-}
-
-// ── STORAGE ───────────────────────────────────────────────────────────────────
-
-// ── XSS PROTECTION: HTML escaper ─────────────────────────────────────────────
-
-// ── MESSAGE SIGNING ───────────────────────────────────────────────────────────
-async function signMessage(msg) {
-    try {
-        const data = (msg.from || '') + '|' + (msg.to || msg.groupId || '') + '|' + (msg.body || '') + '|' + msg.timestamp;
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data + 'scp_msg_2026'));
-        msg._sig = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').slice(0,16);
-    } catch(e) {}
-    return msg;
-}
-function verifyMessage(msg) {
-    // Basic sender check: message from must match stored loggedInUser when we created it
-    // Can't fully verify client-side but we flag obviously forged ones (missing sig)
-    return !!msg._sig;
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;')
-        .replace(/`/g, '&#x60;');
-}
-
-function getMessages() { return JSON.parse(localStorage.getItem("scpMessages")) || []; }
-function saveMessages(m) {
-    // Prune to 2000 messages max to prevent storage overflow
-    if (m.length > 2000) m = m.slice(m.length - 2000);
-    try {
-        const str = JSON.stringify(m);
-        if (str.length > 3500000) {
-            // Emergency prune — keep last 500 only
-            m = m.slice(m.length - 500);
+// ── DM CONVERSATION TRACKER (Supabase-backed via messages) ───────────────────
+// We derive DM convs from message history instead of a separate list
+function getDMConversationKeys(allMsgs){
+    const set=new Set();
+    allMsgs.forEach(m=>{
+        if(m.from_user&&m.to_user&&!m.group_id){
+            set.add([m.from_user.toLowerCase(),m.to_user.toLowerCase()].sort().join('|'));
         }
-        localStorage.setItem("scpMessages", JSON.stringify(m));
-    } catch(e) { console.warn('SCP: message storage full'); }
-}
-function getGroups() { return JSON.parse(localStorage.getItem("scpGroups")) || []; }
-function saveGroups(g) { if(window.DB) DB.save("scpGroups", g); else localStorage.setItem("scpGroups", JSON.stringify(g)); }
-function getDMConvs() { return JSON.parse(localStorage.getItem("scpDMConvs")) || []; }
-function saveDMConvs(c) { if(window.DB) DB.save("scpDMConvs", c); else localStorage.setItem("scpDMConvs", JSON.stringify(c)); }
-
-function trackDMConv(userA, userB) {
-    const convs = getDMConvs();
-    const key = [userA.toLowerCase(), userB.toLowerCase()].sort().join("|");
-    if (!convs.includes(key)) { convs.push(key); saveDMConvs(convs); }
-}
-
-function formatTime(ts) {
-    const d = new Date(ts), now = new Date();
-    return d.toDateString() === now.toDateString()
-        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    });
+    return set;
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-    activeTab = tab;
-    activeConv = null;
-    activeIsGroup = false;
-    const tabs = isAdmin ? ["chats","group","deleted","spy"] : ["chats","group","deleted"];
-    tabs.forEach(t => {
-        const el = document.getElementById("tab-" + t);
-        if (el) el.classList.toggle("active", t === tab);
-    });
-    const labels = { chats: "CHATS", group: "GROUP CHATS", deleted: "DELETED CHATS", spy: "👁 SPY VIEW" };
-    document.getElementById("conv-panel-label").innerText = labels[tab] || tab.toUpperCase();
+function switchTab(tab){
+    activeTab=tab; activeConv=null; activeIsGroup=false;
+    const tabs=isAdmin?['chats','group','deleted','spy']:['chats','group','deleted'];
+    tabs.forEach(t=>{ const el=document.getElementById('tab-'+t); if(el)el.classList.toggle('active',t===tab); });
+    const labels={chats:'CHATS',group:'GROUP CHATS',deleted:'DELETED CHATS',spy:'👁 SPY VIEW'};
+    document.getElementById('conv-panel-label').innerText=labels[tab]||tab.toUpperCase();
     renderConvList();
-    document.getElementById("chat-panel").innerHTML = '<div id="chat-placeholder">// SELECT A CONVERSATION //</div>';
+    document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// SELECT A CONVERSATION //</div>';
 }
 
-// ── CONV LISTS ────────────────────────────────────────────────────────────────
-function getConversations() {
-    const msgs = getMessages();
-    const convs = getDMConvs();
+// ── RENDER CONVERSATION LIST ──────────────────────────────────────────────────
+async function renderConvList(){
+    const list=document.getElementById('conv-list');
+    if(!list)return;
+
+    if(activeTab==='spy'){
+        await renderSpyList(list); return;
+    }
+    if(activeTab==='deleted'){
+        await renderDeletedList(list); return;
+    }
+    if(activeTab==='group'){
+        await renderGroupList(list); return;
+    }
+    // DM chats
+    const allMsgs = await dbGetAllMessages();
+    const dmKeys = getDMConversationKeys(allMsgs);
     const people = {};
 
-    // Show all tracked DM conversations
-    convs.forEach(key => {
-        const [a, b] = key.split("|");
-        const other = a === currentUser.toLowerCase() ? b : b === currentUser.toLowerCase() ? a : null;
-        if (!other) return;
-        if (!people[other]) people[other] = { username: other, lastMsg: "", timestamp: 0, unread: false };
+    // Seed from keys
+    dmKeys.forEach(key=>{
+        const [a,b]=key.split('|');
+        const other=a===currentUser.toLowerCase()?b:(b===currentUser.toLowerCase()?a:null);
+        if(!other)return;
+        if(!people[other])people[other]={username:other,lastMsg:'',timestamp:0,unread:false};
     });
 
-    // Fill in last message info
-    msgs.forEach(m => {
-        if ((m.hiddenBy && m.hiddenBy.includes(currentUser.toLowerCase())) || m.groupId) return;
-        const other = m.from.toLowerCase() === currentUser.toLowerCase() ? m.to
-            : m.to && m.to.toLowerCase() === currentUser.toLowerCase() ? m.from : null;
-        if (!other) return;
-        const key = other.toLowerCase();
-        if (!people[key]) people[key] = { username: other, lastMsg: "", timestamp: 0, unread: false };
-        if (m.timestamp > people[key].timestamp) {
-            people[key].lastMsg = m.fileData ? "📎 File" : m.body;
-            people[key].timestamp = m.timestamp;
+    // Fill last message info
+    allMsgs.forEach(m=>{
+        if(!m.from_user||m.group_id||m.deleted_msg)return;
+        const hiddenBy=Array.isArray(m.hidden_by)?m.hidden_by:(m.hidden_by?JSON.parse(m.hidden_by||'[]'):[]);
+        if(hiddenBy.includes(currentUser.toLowerCase()))return;
+        const other=m.from_user.toLowerCase()===currentUser.toLowerCase()?m.to_user
+            :m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()?m.from_user:null;
+        if(!other)return;
+        const key=other.toLowerCase();
+        if(!people[key])people[key]={username:other,lastMsg:'',timestamp:0,unread:false};
+        if(m.timestamp>people[key].timestamp){
+            people[key].lastMsg=m.file_data?'📎 File':m.body;
+            people[key].timestamp=m.timestamp;
         }
-        if (m.to && m.to.toLowerCase() === currentUser.toLowerCase() && !m.read) people[key].unread = true;
+        if(m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()&&!m.read)
+            people[key].unread=true;
     });
 
-    return Object.values(people).sort((a, b) => b.timestamp - a.timestamp);
-}
-
-function getGroupConversations() {
-    const groups = getGroups().filter(g => !g.deleted && g.members.map(x=>x.toLowerCase()).includes(currentUser.toLowerCase()));
-    const msgs = getMessages();
-    return groups.map(g => {
-        const gMsgs = msgs.filter(m => m.groupId === g.id && !(m.hiddenBy && m.hiddenBy.includes(currentUser.toLowerCase())));
-        const last = gMsgs.sort((a,b) => b.timestamp - a.timestamp)[0];
-        const unread = gMsgs.some(m => m.from.toLowerCase() !== currentUser.toLowerCase() && !m.read);
-        return { ...g, lastMsg: last ? (last.fileData ? "📎 File" : last.body) : "No messages yet", timestamp: last ? last.timestamp : g.created, unread };
-    }).sort((a,b) => b.timestamp - a.timestamp);
-}
-
-function getDeletedConvs() {
-    const people = {};
-    getGroups().filter(g => g.deleted && g.members.map(x=>x.toLowerCase()).includes(currentUser.toLowerCase())).forEach(g => {
-        people["grp_" + g.id] = { username: g.name, isGroup: true, groupId: g.id };
-    });
-    getMessages().forEach(m => {
-        if (!m.deletedMsg) return;
-        if (m.groupId) {
-            const g = getGroups().find(gr => gr.id === m.groupId);
-            if (!g) return;
-            const key = "grp_" + m.groupId;
-            if (!people[key]) people[key] = { username: g.name, isGroup: true, groupId: m.groupId };
-        } else {
-            const other = m.from.toLowerCase() === currentUser.toLowerCase() ? m.to
-                : m.to && m.to.toLowerCase() === currentUser.toLowerCase() ? m.from : null;
-            if (!other) return;
-            const key = other.toLowerCase();
-            if (!people[key]) people[key] = { username: other, isGroup: false };
-        }
-    });
-    return Object.values(people);
-}
-
-// SPY: all DM pairs and all groups (admin only)
-function ensureSystemGroups(username, account) {
-    const isTeacher = account && account.role === 'teacher';
-    let groups = getGroups();
-
-    // Clean up old welcome_permanent group from previous version
-    groups = groups.filter(g => g.id !== 'welcome_permanent');
-
-    function ensureGroup(id, name, groupType) {
-        let g = groups.find(x => x.id === id);
-        if (!g) {
-            g = { id, name, members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType };
-            groups.push(g);
-        }
-        // Always keep deleted = false for permanent groups
-        g.deleted = false;
-        g.permanent = true;
-        g.groupType = groupType;
-        return g;
-    }
-
-    const welcome = ensureGroup('permanent_welcome', 'Welcome', 'all');
-    const students = ensureGroup('permanent_students', 'Students', 'students');
-    const teachers = ensureGroup('permanent_teachers', 'Teachers', 'teachers');
-
-    const addIfMissing = (g, uname) => {
-        if (!g.members.map(x => x.toLowerCase()).includes(uname.toLowerCase())) g.members.push(uname);
-    };
-
-    // Everyone goes in Welcome
-    addIfMissing(welcome, username);
-    // Students in Students, Teachers in Teachers
-    if (isTeacher) addIfMissing(teachers, username);
-    else addIfMissing(students, username);
-
-    saveGroups(groups);
-}
-
-function isStudent(username) {
-    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const u = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
-    return u && u.role !== 'teacher' && !u.access?.includes('Admin');
-}
-
-function getSpyConversations() {
-    const msgs = getMessages();
-    const pairs = {};
-    msgs.forEach(m => {
-        if (m.groupId || m.deletedMsg || !m.to) return;
-        const sorted = [m.from.toLowerCase(), m.to.toLowerCase()].sort();
-        const key = sorted.join('|');
-        if (!pairs[key]) pairs[key] = { user1: sorted[0], user2: sorted[1], timestamp: m.timestamp };
-        else if (m.timestamp > pairs[key].timestamp) pairs[key].timestamp = m.timestamp;
-    });
-    // Only show DMs where at least one participant is a student
-    const dms = Object.values(pairs)
-        .filter(c => isStudent(c.user1) || isStudent(c.user2))
-        .sort((a,b) => b.timestamp - a.timestamp);
-    // Only show groups that have at least one student member
-    const groups = getGroups().filter(g => !g.deleted && g.members.some(m => isStudent(m)));
-    return { dms, groups };
-}
-
-function renderConvList() {
-    const list = document.getElementById("conv-list");
-    list.innerHTML = "";
-
-    if (activeTab === "spy") {
-        const { dms, groups } = getSpyConversations();
-        if (dms.length === 0 && groups.length === 0) { list.innerHTML = '<div class="empty-msg">// NO CONVERSATIONS //</div>'; return; }
-        if (groups.length > 0) {
-            const hdr = document.createElement("div");
-            hdr.style = "padding:8px 14px;font-size:10px;letter-spacing:2px;color:#444;border-bottom:1px solid color-mix(in srgb, var(--scp-green) 15%, transparent);";
-            hdr.innerText = "GROUPS";
-            list.appendChild(hdr);
-            groups.forEach(g => {
-                const div = document.createElement("div");
-                div.className = "conv-item";
-                div.onclick = () => lJ8cKvWB9h(g.id, g.name);
-                div.innerHTML = `<div class="conv-name">👥 ${escapeHtml(g.name)}</div><div class="conv-preview">${g.members.map(escapeHtml).join(", ")}</div>`;
-                list.appendChild(div);
-            });
-        }
-        if (dms.length > 0) {
-            const hdr = document.createElement("div");
-            hdr.style = "padding:8px 14px;font-size:10px;letter-spacing:2px;color:#444;border-bottom:1px solid color-mix(in srgb, var(--scp-green) 15%, transparent);";
-            hdr.innerText = "DIRECT MESSAGES";
-            list.appendChild(hdr);
-            dms.forEach(c => {
-                const div = document.createElement("div");
-                div.className = "conv-item";
-                div.onclick = () => e7rNy8H6h8(c.user1, c.user2);
-                div.innerHTML = `<div class="conv-name">${escapeHtml(getDisplayName(c.user1))} ↔ ${escapeHtml(getDisplayName(c.user2))}</div><div class="conv-preview">${formatTime(c.timestamp)}</div>`;
-                list.appendChild(div);
-            });
-        }
-        return;
-    }
-
-    if (activeTab === "deleted") {
-        const convs = getDeletedConvs();
-        if (convs.length === 0) { list.innerHTML = '<div class="empty-msg">// NO DELETED MESSAGES //</div>'; return; }
-        convs.forEach(c => {
-            const div = document.createElement("div");
-            const isActive = c.isGroup ? activeConv === c.groupId : activeConv === c.username.toLowerCase();
-            div.className = "conv-item" + (isActive ? " active" : "");
-            div.onclick = () => c.isGroup ? openDeletedGroup(c.groupId, c.username) : openDeletedConv(c.username);
-            div.innerHTML = `<div class="conv-name">${c.isGroup ? "👥 " : ""}${escapeHtml(c.username)}</div><div class="conv-preview">Deleted messages</div>`;
-            list.appendChild(div);
-        });
-        return;
-    }
-
-    if (activeTab === "group") {
-        const groups = getGroupConversations();
-        if (groups.length === 0) { list.innerHTML = '<div class="empty-msg">// NO GROUP CHATS //<br><br>Press + NEW GROUP</div>'; return; }
-        groups.forEach(g => {
-            const div = document.createElement("div");
-            div.className = "conv-item" + (g.unread ? " unread" : "") + (activeConv === g.id ? " active" : "");
-            div.onclick = () => openGroup(g.id);
-            div.innerHTML = `<div class="conv-name">${g.unread ? '<span class="unread-dot"></span>' : ''}${escapeHtml(g.name)}</div><div class="conv-preview">${escapeHtml(g.lastMsg)}</div><div class="conv-time">${formatTime(g.timestamp)}</div>`;
-            list.appendChild(div);
-        });
-        return;
-    }
-
-    const convs = getConversations();
-    if (convs.length === 0) { list.innerHTML = '<div class="empty-msg">// NO CHATS YET //<br><br>Press + NEW CHAT</div>'; return; }
-    convs.forEach(c => {
-        const displayName = getDisplayName(c.username);
-        const div = document.createElement("div");
-        div.className = "conv-item" + (c.unread ? " unread" : "") + (activeConv === c.username.toLowerCase() ? " active" : "");
-        div.onclick = () => openConversation(c.username);
-        div.innerHTML = `<div class="conv-name">${c.unread ? '<span class="unread-dot"></span>' : ''}${escapeHtml(displayName)}</div><div class="conv-preview">${escapeHtml(c.lastMsg)}</div><div class="conv-time">${formatTime(c.timestamp)}</div>`;
+    const convs=Object.values(people).sort((a,b)=>b.timestamp-a.timestamp);
+    list.innerHTML='';
+    if(convs.length===0){list.innerHTML='<div class="empty-msg">// NO CHATS YET //<br><br>Press + NEW CHAT</div>';return;}
+    convs.forEach(c=>{
+        const div=document.createElement('div');
+        div.className='conv-item'+(c.unread?' unread':'')+(activeConv===c.username.toLowerCase()?' active':'');
+        div.onclick=()=>openConversation(c.username);
+        div.innerHTML=`<div class="conv-name">${c.unread?'<span class="unread-dot"></span>':''}${escapeHtml(c.username)}</div><div class="conv-preview">${escapeHtml(c.lastMsg||'')}</div><div class="conv-time">${c.timestamp?formatTime(c.timestamp):''}</div>`;
         list.appendChild(div);
     });
 }
 
-// ── SPY VIEW ──────────────────────────────────────────────────────────────────
-function A8U5okXkzl(groupId, groupName) {
-    openMsgConfirm(
-        "Delete group",
-        `Delete group "${groupName}"? This cannot be undone.`,
-        () => {
-            const groups = getGroups();
-            const g = groups.find(gr => gr.id === groupId);
-            if (!g || g.permanent) { openMsgAlert("Cannot delete group", "This group cannot be deleted."); return; }
-            let msgs = getMessages();
-            msgs.forEach(m => { if (m.groupId === groupId) m.deletedMsg = true; });
-            saveMessages(msgs);
-            g.deleted = true;
-            saveGroups(groups);
-            if (activeConv === groupId) {
-                activeConv = null;
-                activeIsGroup = false;
-                document.getElementById('chat-panel').innerHTML = '<div id="chat-placeholder">// SELECT A CONVERSATION //</div>';
-            }
-            renderConvList();
+async function renderGroupList(list){
+    const groups=await dbGetGroups();
+    const myGroups=groups.filter(g=>Array.isArray(g.members)&&g.members.map(x=>x.toLowerCase()).includes(currentUser.toLowerCase()));
+    list.innerHTML='';
+    if(myGroups.length===0){list.innerHTML='<div class="empty-msg">// NO GROUP CHATS //<br><br>Press + NEW GROUP</div>';return;}
+    for(const g of myGroups){
+        const msgs=await dbGetGroupMessages(g.id);
+        const visible=msgs.filter(m=>!m.deleted_msg);
+        const last=visible.sort((a,b)=>b.timestamp-a.timestamp)[0];
+        const unread=visible.some(m=>m.from_user.toLowerCase()!==currentUser.toLowerCase()&&!m.read);
+        const div=document.createElement('div');
+        div.className='conv-item'+(unread?' unread':'')+(activeConv===g.id?' active':'');
+        div.onclick=()=>openGroup(g.id);
+        div.innerHTML=`<div class="conv-name">${unread?'<span class="unread-dot"></span>':''}${escapeHtml(g.name)}</div><div class="conv-preview">${escapeHtml(last?(last.file_data?'📎 File':last.body):'No messages yet')}</div><div class="conv-time">${last?formatTime(last.timestamp):''}</div>`;
+        list.appendChild(div);
+    }
+}
+
+async function renderDeletedList(list){
+    const allMsgs=await dbGetAllMessages();
+    const allGroups=await dbGetAllGroups();
+    const people={};
+    allGroups.filter(g=>g.deleted&&Array.isArray(g.members)&&g.members.map(x=>x.toLowerCase()).includes(currentUser.toLowerCase()))
+        .forEach(g=>{ people['grp_'+g.id]={username:g.name,isGroup:true,groupId:g.id}; });
+    allMsgs.forEach(m=>{
+        if(!m.deleted_msg)return;
+        if(m.group_id){
+            const g=allGroups.find(gr=>gr.id===m.group_id);
+            if(!g)return;
+            const key='grp_'+m.group_id;
+            if(!people[key])people[key]={username:g.name,isGroup:true,groupId:m.group_id};
+        } else {
+            const other=m.from_user&&m.from_user.toLowerCase()===currentUser.toLowerCase()?m.to_user
+                :m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()?m.from_user:null;
+            if(!other)return;
+            const key=other.toLowerCase();
+            if(!people[key])people[key]={username:other,isGroup:false};
         }
-    );
+    });
+    const convs=Object.values(people);
+    list.innerHTML='';
+    if(convs.length===0){list.innerHTML='<div class="empty-msg">// NO DELETED MESSAGES //</div>';return;}
+    convs.forEach(c=>{
+        const div=document.createElement('div');
+        div.className='conv-item'+(c.isGroup?activeConv===c.groupId:activeConv===c.username.toLowerCase()?' active':'');
+        div.onclick=()=>c.isGroup?openDeletedGroup(c.groupId,c.username):openDeletedConv(c.username);
+        div.innerHTML=`<div class="conv-name">${c.isGroup?'👥 ':''}${escapeHtml(c.username)}</div><div class="conv-preview">Deleted messages</div>`;
+        list.appendChild(div);
+    });
 }
 
-function vWzPTpjRxc(user1, user2) {
-    openMsgConfirm(
-        "Delete DM",
-        `Delete all messages between ${user1} and ${user2}? This cannot be undone.`,
-        () => {
-            let msgs = getMessages().filter(m => {
-                if (m.groupId) return true;
-                const a = m.from.toLowerCase(), b = m.to && m.to.toLowerCase();
-                return !((a === user1 && b === user2) || (a === user2 && b === user1));
-            });
-            saveMessages(msgs);
-            const key = [user1, user2].sort().join('|');
-            saveDMConvs(getDMConvs().filter(c => c !== key));
-            renderConvList();
-            document.getElementById('chat-panel').innerHTML = '<div id="chat-placeholder">// CONVERSATION DELETED //</div>';
-        }
-    );
-}
-
-function EnYCsXoblu(groupId) {
-    const groups = getGroups();
-    const g = groups.find(gr => gr.id === groupId);
-    if (!g || g.permanent) { openMsgAlert('Cannot delete group', 'This group cannot be deleted.'); return; }
-    openMsgConfirm(
-        "Delete group",
-        `Delete group "${g.name}"? This cannot be undone.`,
-        () => {
-            let msgs = getMessages();
-            msgs.forEach(m => { if (m.groupId === groupId) m.deletedMsg = true; });
-            saveMessages(msgs);
-            g.deleted = true;
-            saveGroups(groups);
-            renderConvList();
-            document.getElementById('chat-panel').innerHTML = '<div id="chat-placeholder">// GROUP DELETED //</div>';
-        }
-    );
-}
-
-function e7rNy8H6h8(user1, user2) {
-    renderConvList();
-    const msgs = getMessages().filter(m =>
-        !m.groupId && !(m.hiddenBy && m.hiddenBy.includes(currentUser.toLowerCase())) &&
-        ((m.from.toLowerCase() === user1 && m.to && m.to.toLowerCase() === user2) ||
-         (m.from.toLowerCase() === user2 && m.to && m.to.toLowerCase() === user1))
-    ).sort((a,b) => a.timestamp - b.timestamp);
-
-    const panel = document.getElementById("chat-panel");
-    panel.innerHTML = `
-        <div id="chat-header">
-            <div id="chat-header-info">
-                <div id="chat-header-name">${getDisplayName(user1).toUpperCase()} ↔ ${getDisplayName(user2).toUpperCase()}</div>
-                <div id="chat-header-members">SPY VIEW — READ ONLY</div>
-            </div>
-            <button class="hdr-btn hdr-red" onclick="vWzPTpjRxc('${user1}','${user2}')">🗑 DELETE CHAT</button>
-        </div>
-        <div class="spy-readonly">👁 ADMIN SPY MODE — READ ONLY</div>
-        <div id="chat-messages"></div>
-    `;
-    const cm = document.getElementById("chat-messages");
-    if (msgs.length === 0) { cm.innerHTML = '<div class="empty-msg" style="margin:20px auto;">// NO MESSAGES //</div>'; return; }
-    msgs.forEach(m => renderBubble(m, cm, false, true));
-    cm.scrollTop = cm.scrollHeight;
-}
-
-function lJ8cKvWB9h(groupId, groupName) {
-    renderConvList();
-    const msgs = getMessages().filter(m => m.groupId === groupId && !(m.hiddenBy && m.hiddenBy.includes(currentUser.toLowerCase()))).sort((a,b) => a.timestamp - b.timestamp);
-    const g = getGroups().find(gr => gr.id === groupId);
-    const canDelete = g && !g.permanent;
-    const panel = document.getElementById("chat-panel");
-    panel.innerHTML = `
-        <div id="chat-header">
-            <div id="chat-header-info">
-                <div id="chat-header-name">${groupName.toUpperCase()}</div>
-                <div id="chat-header-members">${g ? g.members.map(getDisplayName).join(", ") : ""}</div>
-            </div>
-            ${canDelete ? `<button class="hdr-btn hdr-red" onclick="EnYCsXoblu('${groupId}')">🗑 DELETE GROUP</button>` : ''}
-        </div>
-        <div class="spy-readonly">👁 ADMIN SPY MODE — READ ONLY</div>
-        <div id="chat-messages"></div>
-    `;
-    const cm = document.getElementById("chat-messages");
-    if (msgs.length === 0) { cm.innerHTML = '<div class="empty-msg" style="margin:20px auto;">// NO MESSAGES //</div>'; return; }
-    msgs.forEach(m => renderBubble(m, cm, false, true));
-    cm.scrollTop = cm.scrollHeight;
+async function renderSpyList(list){
+    const allMsgs=await dbGetAllMessages();
+    const allGroups=await dbGetGroups();
+    const pairs={};
+    allMsgs.filter(m=>!m.group_id&&!m.deleted_msg&&m.from_user&&m.to_user).forEach(m=>{
+        const sorted=[m.from_user.toLowerCase(),m.to_user.toLowerCase()].sort();
+        const key=sorted.join('|');
+        if(!pairs[key])pairs[key]={user1:sorted[0],user2:sorted[1],timestamp:m.timestamp};
+        else if(m.timestamp>pairs[key].timestamp)pairs[key].timestamp=m.timestamp;
+    });
+    const dms=Object.values(pairs).sort((a,b)=>b.timestamp-a.timestamp);
+    list.innerHTML='';
+    if(allGroups.length>0){
+        const h=document.createElement('div');
+        h.style='padding:8px 14px;font-size:10px;letter-spacing:2px;color:#444;';
+        h.innerText='GROUPS'; list.appendChild(h);
+        allGroups.forEach(g=>{
+            const div=document.createElement('div');
+            div.className='conv-item';
+            div.onclick=()=>spyOpenGroup(g.id,g.name);
+            div.innerHTML=`<div class="conv-name">👥 ${escapeHtml(g.name)}</div><div class="conv-preview">${(g.members||[]).map(escapeHtml).join(', ')}</div>`;
+            list.appendChild(div);
+        });
+    }
+    if(dms.length>0){
+        const h=document.createElement('div');
+        h.style='padding:8px 14px;font-size:10px;letter-spacing:2px;color:#444;';
+        h.innerText='DIRECT MESSAGES'; list.appendChild(h);
+        dms.forEach(c=>{
+            const div=document.createElement('div');
+            div.className='conv-item';
+            div.onclick=()=>spyOpenDM(c.user1,c.user2);
+            div.innerHTML=`<div class="conv-name">${escapeHtml(c.user1)} ↔ ${escapeHtml(c.user2)}</div><div class="conv-time">${formatTime(c.timestamp)}</div>`;
+            list.appendChild(div);
+        });
+    }
+    if(dms.length===0&&allGroups.length===0)list.innerHTML='<div class="empty-msg">// NO CONVERSATIONS //</div>';
 }
 
 // ── OPEN CONVERSATIONS ────────────────────────────────────────────────────────
-function openConversation(username) {
-    activeConv = username.toLowerCase();
-    activeIsGroup = false;
-    const msgs = getMessages();
-    msgs.forEach(m => { if (m.from.toLowerCase() === username.toLowerCase() && m.to && m.to.toLowerCase() === currentUser.toLowerCase()) m.read = true; });
-    saveMessages(msgs);
-    renderConvList();
-    renderChat();
-}
-
-function openGroup(groupId) {
-    activeConv = groupId;
-    activeIsGroup = true;
-    const msgs = getMessages();
-    msgs.forEach(m => { if (m.groupId === groupId && m.from.toLowerCase() !== currentUser.toLowerCase()) m.read = true; });
-    saveMessages(msgs);
-    renderConvList();
-    renderChat();
-}
-
-function openDeletedGroup(groupId, groupName) {
-    activeConv = groupId;
-    activeIsGroup = true;
-    renderConvList();
-    const msgs = getMessages().filter(m => m.deletedMsg && m.groupId === groupId).sort((a,b) => a.timestamp - b.timestamp);
-    const panel = document.getElementById("chat-panel");
-    panel.innerHTML = `
-        <div id="chat-header">
-            <div id="chat-header-info">
-                <div id="chat-header-name">${groupName.toUpperCase()}</div>
-                <div id="chat-header-members">DELETED GROUP MESSAGES</div>
-            </div>
-            <button class="hdr-btn hdr-green" onclick="recoverAllGroupMsgs('${groupId}')">♻️ RECOVER ALL</button>
-            <button class="hdr-btn hdr-red" onclick="openPermaConvModal('group','${groupId}')">🗑 DELETE FOREVER</button>
-        </div>
-        <div id="chat-messages"></div>
-    `;
-    const cm = document.getElementById("chat-messages");
-    if (msgs.length === 0) { cm.innerHTML = '<div class="empty-msg">// NO DELETED MESSAGES //</div>'; return; }
-    msgs.forEach(m => renderBubble(m, cm, true));
-    cm.scrollTop = cm.scrollHeight;
-}
-
-function recoverAllGroupMsgs(groupId) {
-    const msgs = getMessages();
-    msgs.forEach(m => { if (m.deletedMsg && m.groupId === groupId) m.deletedMsg = false; });
-    saveMessages(msgs);
-    const groups = getGroups();
-    const g = groups.find(gr => gr.id === groupId);
-    if (g) { g.deleted = false; saveGroups(groups); }
-    activeConv = null;
-    renderConvList();
-    document.getElementById("chat-panel").innerHTML = '<div id="chat-placeholder">// ALL MESSAGES RECOVERED //</div>';
-}
-
-function openDeletedConv(username) {
-    activeConv = username.toLowerCase();
-    activeIsGroup = false;
-    renderConvList();
-    const msgs = getMessages().filter(m =>
-        m.deletedMsg &&
-        ((m.from.toLowerCase() === currentUser.toLowerCase() && m.to && m.to.toLowerCase() === username.toLowerCase()) ||
-         (m.to && m.to.toLowerCase() === currentUser.toLowerCase() && m.from.toLowerCase() === username.toLowerCase()))
-    ).sort((a, b) => a.timestamp - b.timestamp);
-    const panel = document.getElementById("chat-panel");
-    panel.innerHTML = `
-        <div id="chat-header">
-            <div id="chat-header-info">
-                <div id="chat-header-name">${getDisplayName(username).toUpperCase()}</div>
-                <div id="chat-header-members">DELETED MESSAGES</div>
-            </div>
-            <button class="hdr-btn hdr-green" onclick="recoverAllMsgs('${username}')">♻️ RECOVER ALL</button>
-            <button class="hdr-btn hdr-red" onclick="openPermaConvModal('dm','${username}')">🗑 DELETE FOREVER</button>
-        </div>
-        <div id="chat-messages"></div>
-    `;
-    const cm = document.getElementById("chat-messages");
-    if (msgs.length === 0) { cm.innerHTML = '<div class="empty-msg">// NO DELETED MESSAGES //</div>'; return; }
-    msgs.forEach(m => renderBubble(m, cm, true));
-    cm.scrollTop = cm.scrollHeight;
-}
-
-function openPermaConvModal(type, id) {
-    permaConvTarget = { type, id };
-    document.getElementById("perma-conv-modal").style.display = "flex";
-}
-
-function BePut0Sstz() {
-    closeModal("perma-conv-modal");
-    if (!permaConvTarget) return;
-    let msgs = getMessages();
-    if (permaConvTarget.type === 'group') {
-        msgs = msgs.filter(m => m.groupId !== permaConvTarget.id);
-        saveMessages(msgs);
-        saveGroups(getGroups().filter(g => g.id !== permaConvTarget.id));
-    } else {
-        const target = permaConvTarget.id.toLowerCase();
-        msgs = msgs.filter(m => !(
-            (m.from.toLowerCase() === currentUser.toLowerCase() && m.to && m.to.toLowerCase() === target) ||
-            (m.to && m.to.toLowerCase() === currentUser.toLowerCase() && m.from.toLowerCase() === target)
-        ));
-        saveMessages(msgs);
+async function openConversation(username){
+    activeConv=username.toLowerCase(); activeIsGroup=false;
+    // Mark unread messages as read
+    const msgs=await dbGetMessages(currentUser,username);
+    for(const m of msgs){
+        if(m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()&&!m.read)
+            await dbUpdateMessage(m.id,{read:true});
     }
-    permaConvTarget = null;
-    activeConv = null;
     renderConvList();
-    document.getElementById("chat-panel").innerHTML = '<div id="chat-placeholder">// CONVERSATION DELETED FOREVER //</div>';
+    await renderChat();
+}
+
+async function openGroup(groupId){
+    activeConv=groupId; activeIsGroup=true;
+    const msgs=await dbGetGroupMessages(groupId);
+    for(const m of msgs){
+        if(m.from_user&&m.from_user.toLowerCase()!==currentUser.toLowerCase()&&!m.read)
+            await dbUpdateMessage(m.id,{read:true});
+    }
+    renderConvList();
+    await renderChat();
+}
+
+async function openDeletedConv(username){
+    activeConv=username.toLowerCase(); activeIsGroup=false;
+    renderConvList();
+    const allMsgs=await dbGetAllMessages();
+    const msgs=allMsgs.filter(m=>m.deleted_msg&&!m.group_id&&
+        ((m.from_user&&m.from_user.toLowerCase()===currentUser.toLowerCase()&&m.to_user&&m.to_user.toLowerCase()===username.toLowerCase())||
+         (m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()&&m.from_user&&m.from_user.toLowerCase()===username.toLowerCase()))
+    ).sort((a,b)=>a.timestamp-b.timestamp);
+    const panel=document.getElementById('chat-panel');
+    panel.innerHTML=`<div id="chat-header"><div id="chat-header-info"><div id="chat-header-name">${escapeHtml(username).toUpperCase()}</div><div id="chat-header-members">DELETED MESSAGES</div></div><button class="hdr-btn hdr-green" onclick="recoverAllMsgs('${username}')">♻️ RECOVER ALL</button><button class="hdr-btn hdr-red" onclick="openPermaConvModal('dm','${username}')">🗑 DELETE FOREVER</button></div><div id="chat-messages"></div>`;
+    const cm=document.getElementById('chat-messages');
+    if(msgs.length===0){cm.innerHTML='<div class="empty-msg">// NO DELETED MESSAGES //</div>';return;}
+    msgs.forEach(m=>renderBubble(m,cm,true));
+    cm.scrollTop=cm.scrollHeight;
+}
+
+async function openDeletedGroup(groupId,groupName){
+    activeConv=groupId; activeIsGroup=true;
+    renderConvList();
+    const allMsgs=await dbGetAllMessages();
+    const msgs=allMsgs.filter(m=>m.deleted_msg&&m.group_id===groupId).sort((a,b)=>a.timestamp-b.timestamp);
+    const panel=document.getElementById('chat-panel');
+    panel.innerHTML=`<div id="chat-header"><div id="chat-header-info"><div id="chat-header-name">${escapeHtml(groupName).toUpperCase()}</div><div id="chat-header-members">DELETED GROUP MESSAGES</div></div><button class="hdr-btn hdr-green" onclick="recoverAllGroupMsgs('${groupId}')">♻️ RECOVER ALL</button><button class="hdr-btn hdr-red" onclick="openPermaConvModal('group','${groupId}')">🗑 DELETE FOREVER</button></div><div id="chat-messages"></div>`;
+    const cm=document.getElementById('chat-messages');
+    if(msgs.length===0){cm.innerHTML='<div class="empty-msg">// NO DELETED MESSAGES //</div>';return;}
+    msgs.forEach(m=>renderBubble(m,cm,true));
+    cm.scrollTop=cm.scrollHeight;
+}
+
+function openPermaConvModal(type,id){ permaConvTarget={type,id}; document.getElementById('perma-conv-modal').style.display='flex'; }
+
+async function confirmPermaDel(){
+    closeModal('perma-conv-modal');
+    if(!permaConvTarget)return;
+    const allMsgs=await dbGetAllMessages();
+    if(permaConvTarget.type==='group'){
+        for(const m of allMsgs.filter(m=>m.group_id===permaConvTarget.id)) await dbDeleteMessage(m.id);
+        await sbReq('DELETE','groups',null,`id=eq.${permaConvTarget.id}`);
+    } else {
+        const t=permaConvTarget.id.toLowerCase();
+        for(const m of allMsgs.filter(m=>!m.group_id&&
+            ((m.from_user&&m.from_user.toLowerCase()===currentUser.toLowerCase()&&m.to_user&&m.to_user.toLowerCase()===t)||
+             (m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()&&m.from_user&&m.from_user.toLowerCase()===t))
+        )) await dbDeleteMessage(m.id);
+    }
+    permaConvTarget=null; activeConv=null;
+    renderConvList();
+    document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// CONVERSATION DELETED FOREVER //</div>';
 }
 
 // ── RENDER CHAT ───────────────────────────────────────────────────────────────
-function renderChat() {
-    const panel = document.getElementById("chat-panel");
-    let msgs, headerHTML;
+async function renderChat(){
+    const panel=document.getElementById('chat-panel');
+    let msgs=[], headerHTML='';
 
-    if (activeIsGroup) {
-        const groups = getGroups();
-        const g = groups.find(gr => gr.id === activeConv);
-        if (!g) return;
-        msgs = getMessages().filter(m => m.groupId === activeConv && !m.deletedMsg).sort((a,b) => a.timestamp - b.timestamp);
-        const isCreator = g.createdBy && g.createdBy.toLowerCase() === currentUser.toLowerCase();
-        const isPermanent = g.permanent === true;
-        headerHTML = `
-            <div id="chat-header">
-                <div id="chat-header-info">
-                    <div id="chat-header-name">${g.name.toUpperCase()}</div>
-                    <div id="chat-header-members">${g.members.map(getDisplayName).join(", ")}</div>
-                </div>
-                ${isPermanent ? '' : `<button class="hdr-btn hdr-green" onclick="openAddMemberModal()">+ ADD</button>`}
-                ${isPermanent ? '' : isCreator
-                    ? `<button class="hdr-btn hdr-red" onclick="openConfirmDelete()">🗑 DELETE</button>`
-                    : `<button class="hdr-btn hdr-red" onclick="openLeaveGroupModal()">🚪 LEAVE</button>`
-                }
-            </div>`;
+    if(activeIsGroup){
+        const allGroups=await dbGetAllGroups();
+        const g=allGroups.find(gr=>gr.id===activeConv);
+        if(!g)return;
+        const rawMsgs=await dbGetGroupMessages(activeConv);
+        msgs=rawMsgs.filter(m=>!m.deleted_msg).sort((a,b)=>a.timestamp-b.timestamp);
+        const isCreator=g.created_by&&g.created_by.toLowerCase()===currentUser.toLowerCase();
+        const isPerm=g.permanent===true;
+        headerHTML=`<div id="chat-header"><div id="chat-header-info"><div id="chat-header-name">${escapeHtml(g.name).toUpperCase()}</div><div id="chat-header-members">${(g.members||[]).map(escapeHtml).join(', ')}</div></div>${isPerm?'':`<button class="hdr-btn hdr-green" onclick="openAddMemberModal()">+ ADD</button>`}${isPerm?'':(isCreator?`<button class="hdr-btn hdr-red" onclick="openConfirmDelete()">🗑 DELETE</button>`:`<button class="hdr-btn hdr-red" onclick="openLeaveGroupModal()">🚪 LEAVE</button>`)}</div>`;
     } else {
-        msgs = getMessages().filter(m =>
-            !m.deletedMsg && !m.groupId &&
-            !(m.hiddenBy && m.hiddenBy.includes(currentUser.toLowerCase())) &&
-            ((m.from.toLowerCase() === currentUser.toLowerCase() && m.to && m.to.toLowerCase() === activeConv) ||
-             (m.to && m.to.toLowerCase() === currentUser.toLowerCase() && m.from.toLowerCase() === activeConv))
-        ).sort((a,b) => a.timestamp - b.timestamp);
-        headerHTML = `
-            <div id="chat-header">
-                <div id="chat-header-info">
-                    <div id="chat-header-name">${getDisplayName(activeConv).toUpperCase()}</div>
-                </div>
-                <button class="hdr-btn hdr-red" onclick="openConfirmDelete()">🗑 DELETE CHAT</button>
-            </div>`;
+        const rawMsgs=await dbGetMessages(currentUser,activeConv);
+        msgs=rawMsgs.filter(m=>{
+            const hiddenBy=Array.isArray(m.hidden_by)?m.hidden_by:(m.hidden_by?JSON.parse(m.hidden_by||'[]'):[]);
+            return !m.deleted_msg&&!hiddenBy.includes(currentUser.toLowerCase());
+        }).sort((a,b)=>a.timestamp-b.timestamp);
+        headerHTML=`<div id="chat-header"><div id="chat-header-info"><div id="chat-header-name">${escapeHtml(activeConv).toUpperCase()}</div></div><button class="hdr-btn hdr-red" onclick="openConfirmDelete()">🗑 DELETE CHAT</button></div>`;
     }
 
-    panel.innerHTML = headerHTML + `
-        <div id="chat-messages"></div>
-        <div id="chat-input-bar">
-            <div id="emoji-picker"></div>
-            <button class="input-icon-btn" onclick="toggleEmojiPicker()" title="Emoji">🙂</button>
-            <button class="input-icon-btn" onclick="document.getElementById('file-input').click()" title="Attach file">📎</button>
-            <input id="chat-input" placeholder="Type a message..." maxlength="1000" onkeydown="if(event.key==='Enter')sendChat(); if(event.key==='Escape')closeEmojiPicker();"/>
-            <button id="chat-send-btn" onclick="sendChat()">▶ SEND</button>
-        </div>
-    `;
-
+    panel.innerHTML=headerHTML+`<div id="chat-messages"></div><div id="chat-input-bar"><div id="emoji-picker"></div><button class="input-icon-btn" onclick="toggleEmojiPicker()" title="Emoji">🙂</button><button class="input-icon-btn" onclick="document.getElementById('file-input').click()" title="Attach file">📎</button><input id="chat-input" placeholder="Type a message..." maxlength="1000" onkeydown="if(event.key==='Enter')sendChat();if(event.key==='Escape')closeEmojiPicker();"/><button id="chat-send-btn" onclick="sendChat()">▶ SEND</button></div>`;
     buildEmojiPicker();
-
-    const cm = document.getElementById("chat-messages");
-    if (msgs.length === 0) {
-        cm.innerHTML = '<div style="text-align:center;font-size:11px;letter-spacing:1px;color:#333;margin-top:20px;">// START OF CONVERSATION //</div>';
-    } else {
-        msgs.forEach(m => renderBubble(m, cm, false));
-    }
-    cm.scrollTop = cm.scrollHeight;
-    setTimeout(() => { const i = document.getElementById("chat-input"); if(i) i.focus(); }, 50);
+    const cm=document.getElementById('chat-messages');
+    if(msgs.length===0) cm.innerHTML='<div style="text-align:center;font-size:11px;letter-spacing:1px;color:#333;margin-top:20px;">// START OF CONVERSATION //</div>';
+    else msgs.forEach(m=>renderBubble(m,cm,false));
+    cm.scrollTop=cm.scrollHeight;
+    setTimeout(()=>{ const i=document.getElementById('chat-input');if(i)i.focus(); },50);
 }
 
-// ── EMOJI PICKER ──────────────────────────────────────────────────────────────
-const EMOJIS = ['😀','😂','😍','🥰','😎','😭','😤','🥺','😅','😱','🤔','😴','🤣','🫡','😏','🙄',
-                 '👍','👎','❤️','🔥','💯','✅','❌','🎉','👀','💀','🙏','👏','💪','🤝','✌️','👋',
-                 '🎮','🚀','💡','⚡','🌙','⭐','💥','🔑','📁','📢','🔒','🛡️','☠️','🤖','👾','🕵️'];
+// ── SPY VIEW ──────────────────────────────────────────────────────────────────
+async function spyOpenDM(user1,user2){
+    const msgs=(await dbGetAllMessages()).filter(m=>!m.group_id&&!m.deleted_msg&&m.from_user&&m.to_user&&
+        ((m.from_user.toLowerCase()===user1&&m.to_user.toLowerCase()===user2)||(m.from_user.toLowerCase()===user2&&m.to_user.toLowerCase()===user1))
+    ).sort((a,b)=>a.timestamp-b.timestamp);
+    const panel=document.getElementById('chat-panel');
+    panel.innerHTML=`<div id="chat-header"><div id="chat-header-info"><div id="chat-header-name">${escapeHtml(user1).toUpperCase()} ↔ ${escapeHtml(user2).toUpperCase()}</div><div id="chat-header-members">SPY VIEW — READ ONLY</div></div><button class="hdr-btn hdr-red" onclick="spyDeleteDM('${user1}','${user2}')">🗑 DELETE CHAT</button></div><div class="spy-readonly">👁 ADMIN SPY MODE — READ ONLY</div><div id="chat-messages"></div>`;
+    const cm=document.getElementById('chat-messages');
+    if(msgs.length===0){cm.innerHTML='<div class="empty-msg" style="margin:20px auto;">// NO MESSAGES //</div>';return;}
+    msgs.forEach(m=>renderBubble(m,cm,false,true));
+    cm.scrollTop=cm.scrollHeight;
+}
 
-function buildEmojiPicker() {
-    const picker = document.getElementById("emoji-picker");
-    if (!picker) return;
-    picker.innerHTML = "";
-    EMOJIS.forEach(e => {
-        const btn = document.createElement("button");
-        btn.className = "emoji-btn";
-        btn.textContent = e;
-        btn.onclick = () => insertEmoji(e);
-        picker.appendChild(btn);
+async function spyOpenGroup(groupId,groupName){
+    const msgs=(await dbGetGroupMessages(groupId)).filter(m=>!m.deleted_msg).sort((a,b)=>a.timestamp-b.timestamp);
+    const allGroups=await dbGetAllGroups();
+    const g=allGroups.find(gr=>gr.id===groupId);
+    const panel=document.getElementById('chat-panel');
+    panel.innerHTML=`<div id="chat-header"><div id="chat-header-info"><div id="chat-header-name">${escapeHtml(groupName).toUpperCase()}</div><div id="chat-header-members">${g?(g.members||[]).map(escapeHtml).join(', '):''}</div></div>${g&&!g.permanent?`<button class="hdr-btn hdr-red" onclick="spyDeleteGroup('${groupId}')">🗑 DELETE GROUP</button>`:''}</div><div class="spy-readonly">👁 ADMIN SPY MODE — READ ONLY</div><div id="chat-messages"></div>`;
+    const cm=document.getElementById('chat-messages');
+    if(msgs.length===0){cm.innerHTML='<div class="empty-msg" style="margin:20px auto;">// NO MESSAGES //</div>';return;}
+    msgs.forEach(m=>renderBubble(m,cm,false,true));
+    cm.scrollTop=cm.scrollHeight;
+}
+
+async function spyDeleteDM(user1,user2){
+    openMsgConfirm('Delete DM',`Delete all messages between ${user1} and ${user2}?`,async()=>{
+        const msgs=(await dbGetAllMessages()).filter(m=>!m.group_id&&m.from_user&&m.to_user&&
+            ((m.from_user.toLowerCase()===user1&&m.to_user.toLowerCase()===user2)||(m.from_user.toLowerCase()===user2&&m.to_user.toLowerCase()===user1)));
+        for(const m of msgs) await dbDeleteMessage(m.id);
+        renderConvList();
+        document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// CONVERSATION DELETED //</div>';
     });
 }
 
-function toggleEmojiPicker() {
-    const picker = document.getElementById("emoji-picker");
-    if (!picker) return;
-    picker.classList.toggle("open");
+async function spyDeleteGroup(groupId){
+    const g=await dbGetGroup(groupId);
+    if(!g||g.permanent){openMsgAlert('Cannot delete','This group cannot be deleted.');return;}
+    openMsgConfirm('Delete group',`Delete group "${g.name}"?`,async()=>{
+        const msgs=await dbGetGroupMessages(groupId);
+        for(const m of msgs) await dbUpdateMessage(m.id,{deleted_msg:true});
+        await dbUpdateGroup(groupId,{deleted:true});
+        renderConvList();
+        document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// GROUP DELETED //</div>';
+    });
 }
 
-function closeEmojiPicker() {
-    const picker = document.getElementById("emoji-picker");
-    if (picker) picker.classList.remove("open");
+// ── RECOVER / PERMANENT DELETE ─────────────────────────────────────────────────
+async function recoverAllMsgs(username){
+    const allMsgs=await dbGetAllMessages();
+    for(const m of allMsgs.filter(m=>m.deleted_msg&&!m.group_id&&
+        ((m.from_user&&m.from_user.toLowerCase()===currentUser.toLowerCase()&&m.to_user&&m.to_user.toLowerCase()===username.toLowerCase())||
+         (m.to_user&&m.to_user.toLowerCase()===currentUser.toLowerCase()&&m.from_user&&m.from_user.toLowerCase()===username.toLowerCase()))
+    )) await dbUpdateMessage(m.id,{deleted_msg:false});
+    activeConv=null; renderConvList();
+    document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// ALL MESSAGES RECOVERED //</div>';
 }
 
-function insertEmoji(emoji) {
-    const input = document.getElementById("chat-input");
-    if (!input) return;
-    const pos = input.selectionStart;
-    input.value = input.value.slice(0, pos) + emoji + input.value.slice(pos);
-    input.selectionStart = input.selectionEnd = pos + emoji.length;
-    input.focus();
-}
-
-// ── FILE UPLOAD ───────────────────────────────────────────────────────────────
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (file.size > 600000) { openMsgAlert("File too large", "This file is bigger than the 600KB limit."); return; }
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        pendingFile = { name: file.name, type: file.type, data: e.target.result };
-        sendChat();
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
+async function recoverAllGroupMsgs(groupId){
+    const msgs=await dbGetGroupMessages(groupId);
+    for(const m of msgs.filter(m=>m.deleted_msg)) await dbUpdateMessage(m.id,{deleted_msg:false});
+    await dbUpdateGroup(groupId,{deleted:false});
+    activeConv=null; renderConvList();
+    document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// ALL MESSAGES RECOVERED //</div>';
 }
 
 // ── RENDER BUBBLE ─────────────────────────────────────────────────────────────
-let hideTimers = {};
+function renderBubble(m,container,isDeletedView,isReadOnly=false){
+    const isMe=m.from_user&&m.from_user.toLowerCase()===currentUser.toLowerCase();
+    const row=document.createElement('div');
+    row.className='bubble-row '+(isMe?'me':'them');
+    row.id='row-'+m.id;
 
-function renderBubble(m, container, isDeletedView, isReadOnly = false) {
-    const isMe = m.from.toLowerCase() === currentUser.toLowerCase();
-    const row = document.createElement("div");
-    row.className = "bubble-row " + (isMe ? "me" : "them");
-    row.id = "row-" + m.id;
-
-    const reactionHtml = m.reaction ? `<span class="reaction">${m.reaction}</span>` : "";
-    const editedHtml = m.edited ? `<span class="edited-tag">edited</span>` : "";
-
-    // Render message body
-    let bodyHtml = "";
-    if (m.fileData) {
-        if (m.fileData.type && m.fileData.type.startsWith("image/")) {
-            // SECURITY: validate src is a safe base64 data URI, never a javascript: or external URL
-            const safeSrc = (typeof m.fileData.data === 'string' && /^data:image\/[a-zA-Z+]+;base64,[A-Za-z0-9+/=]+$/.test(m.fileData.data))
-                ? m.fileData.data : '';
-            bodyHtml = `<img src="${safeSrc}" alt="${escapeHtml(m.fileData.name)}"/>`;
-        } else {
-            // SECURITY: validate href is a safe data URI
-            const safeHref = (typeof m.fileData.data === 'string' && /^data:[a-zA-Z0-9+/]+;base64,[A-Za-z0-9+/=]+$/.test(m.fileData.data))
-                ? m.fileData.data : '#';
-            bodyHtml = `<a class="file-attach" href="${safeHref}" download="${escapeHtml(m.fileData.name)}">📎 ${escapeHtml(m.fileData.name)}</a`;
+    let bodyHtml='';
+    if(m.file_data){
+        const fd=typeof m.file_data==='string'?JSON.parse(m.file_data):m.file_data;
+        if(fd&&fd.type&&fd.type.startsWith('image/')){
+            const safe=/^data:image\/[a-zA-Z+]+;base64,[A-Za-z0-9+/=]+$/.test(fd.data)?fd.data:'';
+            bodyHtml=`<img src="${safe}" alt="${escapeHtml(fd.name)}"/>`;
+        } else if(fd){
+            const safe=/^data:[a-zA-Z0-9+/]+;base64,[A-Za-z0-9+/=]+$/.test(fd.data)?fd.data:'#';
+            bodyHtml=`<a class="file-attach" href="${safe}" download="${escapeHtml(fd.name)}">📎 ${escapeHtml(fd.name)}</a>`;
         }
     } else {
-        // SECURITY: escape HTML to prevent XSS in message content
-        bodyHtml = escapeHtml(m.body);
+        bodyHtml=escapeHtml(m.body||'');
     }
 
-    let actionButtons = "";
-    if (!isReadOnly) {
-        if (isDeletedView) {
-            actionButtons = `
-                <button class="action-btn" title="Recover" onclick="recoverMsg('${m.id}')">♻️</button>
-                <button class="action-btn red" title="Permanently Delete" onclick="openPermaMsgModal('${m.id}')">🗑</button>`;
+    const reactionHtml=m.reaction?`<span class="reaction">${m.reaction}</span>`:'';
+    const editedHtml=m.edited?`<span class="edited-tag">edited</span>`:'';
+    let actionButtons='';
+    if(!isReadOnly){
+        if(isDeletedView){
+            actionButtons=`<button class="action-btn" onclick="recoverMsg('${m.id}')">♻️</button><button class="action-btn red" onclick="openPermaMsgModal('${m.id}')">🗑</button>`;
         } else {
-            actionButtons = `
-                <button class="action-btn" title="Like" onclick="reactMsg('${m.id}','👍')">👍</button>
-                <button class="action-btn" title="Dislike" onclick="reactMsg('${m.id}','👎')">👎</button>
-                ${isMe && !m.fileData ? `<button class="action-btn" title="Edit" onclick="openEditModal('${m.id}')">✏️</button>` : ""}
-                <button class="action-btn red" title="Hide for me" onclick="hideMsg('${m.id}')">🗑</button>`;
+            actionButtons=`<button class="action-btn" onclick="reactMsg('${m.id}','👍')">👍</button><button class="action-btn" onclick="reactMsg('${m.id}','👎')">👎</button>${isMe&&!m.file_data?`<button class="action-btn" onclick="openEditModal('${m.id}')">✏️</button>`:''}<button class="action-btn red" onclick="hideMsg('${m.id}')">🗑</button>`;
         }
     }
 
-    const senderDisplay = escapeHtml(getDisplayName(m.from));
-    row.innerHTML = `
-        <div class="bubble-wrap">
-            <div class="bubble ${isMe ? "me" : "them"}">${bodyHtml}</div>
-            <div class="bubble-meta"><span>${senderDisplay}</span><span style="opacity:0.5">·</span><span>${formatTime(m.timestamp)}</span>${editedHtml}</div>
-            ${reactionHtml}
-            ${actionButtons ? `<div class="bubble-actions" id="actions-${m.id}">${actionButtons}</div>` : ""}
-        </div>
-    `;
+    row.innerHTML=`<div class="bubble-wrap"><div class="bubble ${isMe?'me':'them'}">${bodyHtml}</div><div class="bubble-meta"><span>${escapeHtml(m.from_user||'')}</span><span style="opacity:0.5">·</span><span>${formatTime(m.timestamp)}</span>${editedHtml}</div>${reactionHtml}${actionButtons?`<div class="bubble-actions" id="actions-${m.id}">${actionButtons}</div>`:''}</div>`;
     container.appendChild(row);
-
-
 }
 
 // ── MESSAGE ACTIONS ───────────────────────────────────────────────────────────
-function reactMsg(id, emoji) {
-    const msgs = getMessages();
-    const m = msgs.find(m => m.id === id);
-    if (!m) return;
-    m.reaction = m.reaction === emoji ? null : emoji;
-    saveMessages(msgs);
-    refreshBubble(id);
+async function reactMsg(id,emoji){
+    const allMsgs=await dbGetAllMessages();
+    const m=allMsgs.find(x=>x.id===id);
+    if(!m)return;
+    const newR=m.reaction===emoji?null:emoji;
+    await dbUpdateMessage(id,{reaction:newR});
+    const row=document.getElementById('row-'+id);
+    if(row){ const t=document.createElement('div'); const updated={...m,reaction:newR}; renderBubble(updated,t,false); row.replaceWith(t.firstChild); }
 }
 
-function openEditModal(id) {
-    const msgs = getMessages();
-    const m = msgs.find(m => m.id === id);
-    if (!m) return;
-    editingMsgId = id;
-    document.getElementById("edit-input").value = m.body;
-    document.getElementById("edit-modal").style.display = "flex";
-    setTimeout(() => document.getElementById("edit-input").focus(), 50);
+function openEditModal(id){
+    editingMsgId=id;
+    document.getElementById('edit-input').value='';
+    document.getElementById('edit-modal').style.display='flex';
+    setTimeout(()=>document.getElementById('edit-input').focus(),50);
+    // Fetch body async
+    dbGetAllMessages().then(msgs=>{ const m=msgs.find(x=>x.id===id); if(m)document.getElementById('edit-input').value=m.body||''; });
 }
 
-function saveEdit() {
-    const val = censorText(document.getElementById("edit-input").value.trim());
-    if (!val) return;
-    const msgs = getMessages();
-    const m = msgs.find(m => m.id === editingMsgId);
-    if (m) { m.body = val; m.edited = true; }
-    saveMessages(msgs);
-    closeModal("edit-modal");
-    refreshBubble(editingMsgId);
+async function saveEdit(){
+    const val=censorText(document.getElementById('edit-input').value.trim());
+    if(!val)return;
+    await dbUpdateMessage(editingMsgId,{body:val,edited:true});
+    closeModal('edit-modal');
+    await renderChat();
     renderConvList();
 }
 
-function hideMsg(id) {
-    const msgs = getMessages();
-    const m = msgs.find(msg => msg.id === id);
-    if (!m) return;
-    // Mark as deleted so it shows in deleted tab and is filtered from chat
-    m.deletedMsg = true;
-    saveMessages(msgs);
-    // Remove from DOM immediately
-    const row = document.getElementById("row-" + id);
-    if (row) row.remove();
-    // Re-render conversation so it doesn't flash back on any refresh
-    renderConvList();
-    // Re-render the current chat to remove the message properly
-    if (activeConv) openConversation(activeConv);
-}
-
-function recoverMsg(id) {
-    const msgs = getMessages();
-    const m = msgs.find(m => m.id === id);
-    if (!m) return;
-    m.deletedMsg = false;
-    saveMessages(msgs);
-    if (m.groupId) {
-        const groups = getGroups();
-        const g = groups.find(gr => gr.id === m.groupId);
-        if (g && g.deleted) { g.deleted = false; saveGroups(groups); }
-    }
-    const row = document.getElementById("row-" + id);
-    if (row) row.remove();
-    renderConvList();
-    const remaining = m.groupId
-        ? getMessages().filter(msg => (msg.hiddenBy && msg.hiddenBy.includes(currentUser.toLowerCase())) && msg.groupId === m.groupId)
-        : getMessages().filter(msg => msg.deletedMsg &&
-            ((msg.from.toLowerCase() === currentUser.toLowerCase() && msg.to && msg.to.toLowerCase() === activeConv) ||
-             (msg.to && msg.to.toLowerCase() === currentUser.toLowerCase() && msg.from.toLowerCase() === activeConv)));
-    if (remaining.length === 0) document.getElementById("chat-panel").innerHTML = '<div id="chat-placeholder">// NO MORE DELETED MESSAGES //</div>';
-}
-
-function recoverAllMsgs(username) {
-    const msgs = getMessages();
-    msgs.forEach(m => {
-        if (m.deletedMsg &&
-            ((m.from.toLowerCase() === currentUser.toLowerCase() && m.to && m.to.toLowerCase() === username.toLowerCase()) ||
-             (m.to && m.to.toLowerCase() === currentUser.toLowerCase() && m.from.toLowerCase() === username.toLowerCase()))) {
-            m.deletedMsg = false;
-        }
-    });
-    saveMessages(msgs);
-    activeConv = null;
-    renderConvList();
-    document.getElementById("chat-panel").innerHTML = '<div id="chat-placeholder">// ALL MESSAGES RECOVERED //</div>';
-}
-
-function openPermaMsgModal(id) {
-    permaMsgId = id;
-    document.getElementById("perma-msg-modal").style.display = "flex";
-}
-
-function KlcBGYQ6Tm() {
-    let msgs = getMessages();
-    msgs = msgs.filter(m => m.id !== permaMsgId);
-    saveMessages(msgs);
-    closeModal("perma-msg-modal");
-    const row = document.getElementById("row-" + permaMsgId);
-    if (row) row.remove();
+async function hideMsg(id){
+    // Mark as deleted so it won't show for anyone
+    await dbUpdateMessage(id,{deleted_msg:true});
+    const row=document.getElementById('row-'+id);
+    if(row)row.remove();
     renderConvList();
 }
 
-function refreshBubble(id) {
-    const msgs = getMessages();
-    const m = msgs.find(m => m.id === id);
-    if (!m) return;
-    const row = document.getElementById("row-" + id);
-    if (!row) return;
-    const temp = document.createElement("div");
-    renderBubble(m, temp, false);
-    row.replaceWith(temp.firstChild);
+async function recoverMsg(id){
+    await dbUpdateMessage(id,{deleted_msg:false});
+    const row=document.getElementById('row-'+id);
+    if(row)row.remove();
+    renderConvList();
 }
 
-// ── SEND ──────────────────────────────────────────────────────────────────────
-function sendChat() {
-    const input = document.getElementById("chat-input");
-    if (!activeConv) return;
-    // SECURITY: verify sender is actually the logged-in user
-    const verifiedUser = localStorage.getItem('loggedInUser');
-    if (!verifiedUser || verifiedUser.toLowerCase() !== currentUser.toLowerCase()) {
-        alert('Session mismatch — please log in again.');
-        window.location.href = 'Index.html'; return;
-    }
+function openPermaMsgModal(id){ permaMsgId=id; document.getElementById('perma-msg-modal').style.display='flex'; }
+
+async function permanentDeleteMsg(){
+    await dbDeleteMessage(permaMsgId);
+    closeModal('perma-msg-modal');
+    const row=document.getElementById('row-'+permaMsgId);
+    if(row)row.remove();
+    renderConvList();
+}
+
+// ── EMOJI PICKER ──────────────────────────────────────────────────────────────
+const EMOJIS=['😀','😂','😍','🥰','😎','😭','😤','🥺','😅','😱','🤔','😴','🤣','🫡','😏','🙄','👍','👎','❤️','🔥','💯','✅','❌','🎉','👀','💀','🙏','👏','💪','🤝','✌️','👋','🎮','🚀','💡','⚡','🌙','⭐','💥','🔑','📁','📢','🔒','🛡️','☠️','🤖','👾','🕵️'];
+function buildEmojiPicker(){
+    const picker=document.getElementById('emoji-picker');
+    if(!picker)return;
+    picker.innerHTML='';
+    EMOJIS.forEach(e=>{ const btn=document.createElement('button'); btn.className='emoji-btn'; btn.textContent=e; btn.onclick=()=>insertEmoji(e); picker.appendChild(btn); });
+}
+function toggleEmojiPicker(){ const p=document.getElementById('emoji-picker');if(p)p.classList.toggle('open'); }
+function closeEmojiPicker(){ const p=document.getElementById('emoji-picker');if(p)p.classList.remove('open'); }
+function insertEmoji(e){ const inp=document.getElementById('chat-input');if(!inp)return; const pos=inp.selectionStart; inp.value=inp.value.slice(0,pos)+e+inp.value.slice(pos); inp.selectionStart=inp.selectionEnd=pos+e.length; inp.focus(); }
+
+// ── FILE UPLOAD ───────────────────────────────────────────────────────────────
+function handleFileUpload(event){
+    const file=event.target.files[0];
+    if(!file)return;
+    if(file.size>600000){openMsgAlert('File too large','Max 600KB');return;}
+    const reader=new FileReader();
+    reader.onload=e=>{ pendingFile={name:file.name,type:file.type,data:e.target.result}; sendChat(); };
+    reader.readAsDataURL(file);
+    event.target.value='';
+}
+
+// ── SEND MESSAGE ──────────────────────────────────────────────────────────────
+async function sendChat(){
+    if(!activeConv)return;
     closeEmojiPicker();
-
-    if (pendingFile) {
-        // File size guard: 500KB max per file message
-        if (pendingFile.data && pendingFile.data.length > 700000) {
-            showAlert && showAlert('File too large', 'File messages are limited to ~500KB.'); return;
-        }
-        const msgs = getMessages();
-        const msg = { id: Date.now().toString(), from: currentUser, body: "", fileData: pendingFile, timestamp: Date.now(), read: false };
-        if (activeIsGroup) msg.groupId = activeConv; else msg.to = activeConv;
-        msgs.push(msg);
-        saveMessages(msgs);
-        pendingFile = null;
-        renderConvList();
-        renderChat();
-        return;
+    const verifiedUser=localStorage.getItem('loggedInUser');
+    if(!verifiedUser||verifiedUser.toLowerCase()!==currentUser.toLowerCase()){
+        window.location.href='Index.html';return;
     }
 
-    if (!input) return;
-    const rawBody = input.value.trim();
-    if (!rawBody) return;
-    if (rawBody.length > 2000) { showAlert && showAlert('Too long', 'Messages are limited to 2000 characters.'); return; }
-    const body = censorText(rawBody);
-    const msgs = getMessages();
-    const msg = { id: Date.now().toString(), from: currentUser, body, timestamp: Date.now(), read: false };
-    if (activeIsGroup) msg.groupId = activeConv; else msg.to = activeConv;
-    signMessage(msg).then(signed => {
-        msgs.push(signed);
-        saveMessages(msgs);
-        input.value = "";
-        renderConvList();
-        renderChat();
-    });
-    return; // async path handles the rest below
+    let msgData={ id:Date.now().toString()+Math.random().toString(36).slice(2), from_user:currentUser, timestamp:Date.now(), read:false, deleted_msg:false, edited:false };
+
+    if(activeIsGroup) msgData.group_id=activeConv;
+    else msgData.to_user=activeConv;
+
+    if(pendingFile){
+        if(pendingFile.data&&pendingFile.data.length>700000){openMsgAlert('File too large','~500KB max');return;}
+        msgData.file_data=JSON.stringify(pendingFile);
+        msgData.body='';
+        pendingFile=null;
+    } else {
+        const input=document.getElementById('chat-input');
+        if(!input)return;
+        const raw=input.value.trim();
+        if(!raw)return;
+        if(raw.length>2000){openMsgAlert('Too long','Max 2000 characters');return;}
+        msgData.body=censorText(raw);
+        input.value='';
+    }
+
+    await dbSendMessage(msgData);
+    await renderConvList();
+    await renderChat();
 }
 
-// ── DELETE CHAT ───────────────────────────────────────────────────────────────
-function openConfirmDelete() {
-    // Set descriptive body based on chat type
-    const body = document.getElementById("confirm-modal-body");
-    if (activeIsGroup) {
-        const groups = getGroups();
-        const g = groups.find(gr => gr.id === activeConv);
-        const name = g ? g.name : 'this group';
-        body.innerText = `This will delete the group chat "${name}" and move all its messages to the Deleted Chats tab. All members will lose access to this group.`;
+// ── DELETE CHAT / GROUP ───────────────────────────────────────────────────────
+async function openConfirmDelete(){
+    const body=document.getElementById('confirm-modal-body');
+    if(activeIsGroup){
+        const g=await dbGetGroup(activeConv);
+        body.innerText=`Delete group "${g?g.name:'this group'}"? All messages move to Deleted tab.`;
     } else {
-        body.innerText = `This will delete your entire conversation with ${activeConv}. All messages will be moved to the Deleted Chats tab. This cannot be undone.`;
+        body.innerText=`Delete conversation with ${activeConv}? Messages move to Deleted tab.`;
     }
-    document.getElementById("confirm-modal").style.display = "flex";
+    document.getElementById('confirm-modal').style.display='flex';
 }
 
-function confirmDeleteChat() {
-    closeModal("confirm-modal");
-    const msgs = getMessages();
-
-    if (activeIsGroup) {
-        // Block permanent groups from being deleted
-        const groups = getGroups();
-        const g = groups.find(gr => gr.id === activeConv);
-        if (g && g.permanent) { openMsgAlert("Cannot delete group", "This permanent group cannot be deleted."); return; }
-        // Mark all group messages as deleted and mark group deleted
-        msgs.forEach(m => { if (m.groupId === activeConv) m.deletedMsg = true; });
-        saveMessages(msgs);
-        if (g) { g.deleted = true; saveGroups(groups); }
+async function confirmDeleteChat(){
+    closeModal('confirm-modal');
+    if(activeIsGroup){
+        const g=await dbGetGroup(activeConv);
+        if(g&&g.permanent){openMsgAlert('Cannot delete','This permanent group cannot be deleted.');return;}
+        const msgs=await dbGetGroupMessages(activeConv);
+        for(const m of msgs) await dbUpdateMessage(m.id,{deleted_msg:true});
+        if(g) await dbUpdateGroup(activeConv,{deleted:true});
     } else {
-        // DM delete — remove from both sides (remove all messages and remove DM tracking)
-        const filtered = msgs.filter(m => !(
-            !m.groupId &&
-            ((m.from.toLowerCase() === currentUser.toLowerCase() && m.to && m.to.toLowerCase() === activeConv) ||
-             (m.to && m.to.toLowerCase() === currentUser.toLowerCase() && m.from.toLowerCase() === activeConv))
-        ));
-        saveMessages(filtered);
-        // Remove DM from tracked conversations for both users
-        const key = [currentUser.toLowerCase(), activeConv.toLowerCase()].sort().join("|");
-        const convs = getDMConvs().filter(c => c !== key);
-        saveDMConvs(convs);
+        const msgs=await dbGetMessages(currentUser,activeConv);
+        for(const m of msgs) await dbUpdateMessage(m.id,{deleted_msg:true});
     }
-
-    activeConv = null;
-    renderConvList();
-    document.getElementById("chat-panel").innerHTML = '<div id="chat-placeholder">// SELECT A CONVERSATION //</div>';
+    activeConv=null; renderConvList();
+    document.getElementById('chat-panel').innerHTML='<div id="chat-placeholder">// SELECT A CONVERSATION //</div>';
 }
 
 // ── NEW CHAT ──────────────────────────────────────────────────────────────────
-function openNewChatModal() {
-    document.getElementById("new-chat-user").value = "";
-    document.getElementById("new-chat-error").innerText = "";
-    document.getElementById("new-chat-modal").style.display = "flex";
-    setTimeout(() => document.getElementById("new-chat-user").focus(), 50);
+function openNewChatModal(){
+    document.getElementById('new-chat-user').value='';
+    document.getElementById('new-chat-error').innerText='';
+    document.getElementById('new-chat-modal').style.display='flex';
+    setTimeout(()=>document.getElementById('new-chat-user').focus(),50);
 }
 
-function startNewChat() {
-    const username = document.getElementById("new-chat-user").value.trim();
-    const err = document.getElementById("new-chat-error");
-    if (!username) { err.innerText = "Please enter a username."; return; }
-    if (username.toLowerCase() === currentUser.toLowerCase()) { err.innerText = "You can't message yourself."; return; }
-    const approved = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    if (!approved.some(a => a.username.toLowerCase() === username.toLowerCase())) { err.innerText = "User not found."; return; }
-    closeModal("new-chat-modal");
-    trackDMConv(currentUser, username);
-    switchTab("chats");
-    activeConv = username.toLowerCase();
-    activeIsGroup = false;
-    renderConvList();
-    renderChat();
+async function startNewChat(){
+    const username=document.getElementById('new-chat-user').value.trim();
+    const err=document.getElementById('new-chat-error');
+    if(!username){err.innerText='Please enter a username.';return;}
+    if(username.toLowerCase()===currentUser.toLowerCase()){err.innerText="You can't message yourself.";return;}
+    // Look up user in Supabase
+    const targetUser=await dbGetAccount(username);
+    if(!targetUser){err.innerText='User not found.';return;}
+    if(!Array.isArray(targetUser.access)||!targetUser.access.includes('Messages')){err.innerText='That user cannot receive messages.';return;}
+    closeModal('new-chat-modal');
+    activeConv=username.toLowerCase(); activeIsGroup=false;
+    switchTab('chats');
+    await renderConvList();
+    await renderChat();
 }
 
 // ── GROUP CHATS ───────────────────────────────────────────────────────────────
-function openNewGroupModal() {
-    pendingGroupMembers = [];
-    document.getElementById("group-name-input").value = "";
-    document.getElementById("group-member-input").value = "";
-    document.getElementById("new-group-error").innerText = "";
+function openNewGroupModal(){
+    pendingGroupMembers=[];
+    document.getElementById('group-name-input').value='';
+    document.getElementById('group-member-input').value='';
+    document.getElementById('new-group-error').innerText='';
     renderPendingMembers();
-    document.getElementById("new-group-modal").style.display = "flex";
-    setTimeout(() => document.getElementById("group-name-input").focus(), 50);
+    document.getElementById('new-group-modal').style.display='flex';
+    setTimeout(()=>document.getElementById('group-name-input').focus(),50);
 }
 
-function addMemberToGroup() {
-    const input = document.getElementById("group-member-input");
-    const username = input.value.trim();
-    const err = document.getElementById("new-group-error");
-    if (!username) return;
-    if (username.toLowerCase() === currentUser.toLowerCase()) { err.innerText = "You are already in the group."; return; }
-    if (pendingGroupMembers.map(x=>x.toLowerCase()).includes(username.toLowerCase())) { err.innerText = "Already added."; return; }
-    const approved = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    if (!approved.some(a => a.username.toLowerCase() === username.toLowerCase())) { err.innerText = "User not found."; return; }
-    err.innerText = "";
+async function addMemberToGroup(){
+    const inp=document.getElementById('group-member-input');
+    const username=inp.value.trim();
+    const err=document.getElementById('new-group-error');
+    if(!username)return;
+    if(username.toLowerCase()===currentUser.toLowerCase()){err.innerText='You are already in the group.';return;}
+    if(pendingGroupMembers.map(x=>x.toLowerCase()).includes(username.toLowerCase())){err.innerText='Already added.';return;}
+    const u=await dbGetAccount(username);
+    if(!u){err.innerText='User not found.';return;}
+    err.innerText='';
     pendingGroupMembers.push(username);
-    input.value = "";
-    renderPendingMembers();
-    input.focus();
+    inp.value=''; renderPendingMembers(); inp.focus();
 }
 
-function renderPendingMembers() {
-    const list = document.getElementById("group-members-list");
-    list.innerHTML = "";
-    pendingGroupMembers.forEach((m, i) => {
-        const chip = document.createElement("div");
-        chip.className = "member-chip";
-        chip.innerHTML = `${m} <button onclick="removePendingMember(${i})">✕</button>`;
-        list.appendChild(chip);
-    });
+function renderPendingMembers(){
+    const list=document.getElementById('group-members-list');
+    list.innerHTML='';
+    pendingGroupMembers.forEach((m,i)=>{ const chip=document.createElement('div'); chip.className='member-chip'; chip.innerHTML=`${escapeHtml(m)} <button onclick="removePendingMember(${i})">✕</button>`; list.appendChild(chip); });
+}
+function removePendingMember(i){ pendingGroupMembers.splice(i,1); renderPendingMembers(); }
+
+async function createGroup(){
+    const name=document.getElementById('group-name-input').value.trim();
+    const err=document.getElementById('new-group-error');
+    if(!name){err.innerText='Please enter a group name.';return;}
+    if(pendingGroupMembers.length===0){err.innerText='Add at least one member.';return;}
+    const newGroup={ id:'g'+Date.now(), name, members:[currentUser,...pendingGroupMembers], created_by:currentUser, created:Date.now(), deleted:false, permanent:false };
+    await dbCreateGroup(newGroup);
+    closeModal('new-group-modal');
+    activeConv=newGroup.id; activeIsGroup=true;
+    switchTab('group');
+    await renderConvList();
+    await renderChat();
 }
 
-function removePendingMember(i) {
-    pendingGroupMembers.splice(i, 1);
-    renderPendingMembers();
+function openAddMemberModal(){
+    document.getElementById('add-member-input').value='';
+    document.getElementById('add-member-error').innerText='';
+    document.getElementById('add-member-modal').style.display='flex';
+    setTimeout(()=>document.getElementById('add-member-input').focus(),50);
 }
 
-function createGroup() {
-    const name = document.getElementById("group-name-input").value.trim();
-    const err = document.getElementById("new-group-error");
-    if (!name) { err.innerText = "Please enter a group name."; return; }
-    if (pendingGroupMembers.length === 0) { err.innerText = "Add at least one member."; return; }
-    const groups = getGroups();
-    const newGroup = { id: "g" + Date.now(), name, members: [currentUser, ...pendingGroupMembers], createdBy: currentUser, created: Date.now(), deleted: false };
-    groups.push(newGroup);
-    saveGroups(groups);
-    closeModal("new-group-modal");
-    switchTab("group");
-    activeConv = newGroup.id;
-    activeIsGroup = true;
-    renderConvList();
-    renderChat();
+async function addMemberToExistingGroup(){
+    const username=document.getElementById('add-member-input').value.trim();
+    const err=document.getElementById('add-member-error');
+    if(!username){err.innerText='Please enter a username.';return;}
+    const g=await dbGetGroup(activeConv);
+    if(!g)return;
+    if((g.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())){err.innerText='Already in group.';return;}
+    const u=await dbGetAccount(username);
+    if(!u){err.innerText='User not found.';return;}
+    if(g.group_type==='students'&&u.role==='teacher'){err.innerText='Teachers cannot join the Students group.';return;}
+    if(g.group_type==='teachers'&&u.role!=='teacher'){err.innerText='Only teachers can join the Teachers group.';return;}
+    const newMembers=[...(g.members||[]),username];
+    await dbUpdateGroup(g.id,{members:newMembers});
+    closeModal('add-member-modal');
+    await renderChat();
 }
 
-function openAddMemberModal() {
-    document.getElementById("add-member-input").value = "";
-    document.getElementById("add-member-error").innerText = "";
-    document.getElementById("add-member-modal").style.display = "flex";
-    setTimeout(() => document.getElementById("add-member-input").focus(), 50);
+function openLeaveGroupModal(){
+    document.getElementById('leave-group-modal').style.display='flex';
 }
 
-function addMemberToExistingGroup() {
-    const username = document.getElementById("add-member-input").value.trim();
-    const err = document.getElementById("add-member-error");
-    if (!username) { err.innerText = "Please enter a username."; return; }
-    const groups = getGroups();
-    const g = groups.find(gr => gr.id === activeConv);
-    if (!g) return;
-    if (g.members.map(x=>x.toLowerCase()).includes(username.toLowerCase())) { err.innerText = "Already in group."; return; }
-    const approved = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const targetUser = approved.find(a => a.username.toLowerCase() === username.toLowerCase());
-    if (!targetUser) { err.innerText = "User not found."; return; }
-    // Role restrictions on permanent groups
-    if (g.groupType === 'students' && targetUser.role === 'teacher') {
-        err.innerText = "Teachers cannot be added to the Students group."; return;
-    }
-    if (g.groupType === 'teachers' && targetUser.role !== 'teacher') {
-        err.innerText = "Only teachers can be added to the Teachers group."; return;
-    }
-    g.members.push(username);
-    saveGroups(groups);
-    closeModal("add-member-modal");
-    renderConvList();
-    renderChat();
+async function confirmLeaveGroup(){
+    closeModal('leave-group-modal');
+    const g=await dbGetGroup(activeConv);
+    if(!g||g.permanent){openMsgAlert('Cannot leave','You cannot leave this permanent group.');return;}
+    const newMembers=(g.members||[]).filter(m=>m.toLowerCase()!==currentUser.toLowerCase());
+    await dbUpdateGroup(g.id,{members:newMembers});
+    activeConv=null; activeIsGroup=false;
+    switchTab('group');
 }
 
-function openLeaveGroupModal() {
-    const groups = getGroups();
-    const g = groups.find(gr => gr.id === activeConv);
-    if (g && g.permanent) { openMsgAlert("Cannot leave group", "You cannot leave this permanent group."); return; }
-    document.getElementById("leave-group-modal").style.display = "flex";
+// ── POLLING (new messages every 4 sec) ───────────────────────────────────────
+function startPolling(){
+    _pollTimer=setInterval(async()=>{
+        // Check for new messages by fetching recent ones
+        const recentCheck=await sbReq('GET','messages',null,'order=timestamp.desc&limit=1');
+        if(recentCheck&&recentCheck[0]&&recentCheck[0].timestamp>_lastMsgTimestamp){
+            _lastMsgTimestamp=recentCheck[0].timestamp;
+            // Refresh conv list
+            renderConvList();
+            // If in active chat, refresh messages
+            if(activeConv){
+                const cm=document.getElementById('chat-messages');
+                if(cm){
+                    if(activeIsGroup){
+                        const msgs=(await dbGetGroupMessages(activeConv)).filter(m=>!m.deleted_msg).sort((a,b)=>a.timestamp-b.timestamp);
+                        const wasBottom=cm.scrollHeight-cm.scrollTop-cm.clientHeight<60;
+                        const existing=new Set([...cm.querySelectorAll('.bubble-row')].map(r=>r.id));
+                        msgs.forEach(m=>{ if(!existing.has('row-'+m.id))renderBubble(m,cm,false); });
+                        if(wasBottom)cm.scrollTop=cm.scrollHeight;
+                    } else {
+                        const msgs=(await dbGetMessages(currentUser,activeConv)).filter(m=>{
+                            const hb=Array.isArray(m.hidden_by)?m.hidden_by:(m.hidden_by?JSON.parse(m.hidden_by||'[]'):[]);
+                            return !m.deleted_msg&&!hb.includes(currentUser.toLowerCase());
+                        }).sort((a,b)=>a.timestamp-b.timestamp);
+                        const wasBottom=cm.scrollHeight-cm.scrollTop-cm.clientHeight<60;
+                        const existing=new Set([...cm.querySelectorAll('.bubble-row')].map(r=>r.id));
+                        msgs.forEach(m=>{ if(!existing.has('row-'+m.id))renderBubble(m,cm,false); });
+                        if(wasBottom)cm.scrollTop=cm.scrollHeight;
+                    }
+                }
+            }
+        }
+    },4000);
 }
-
-function confirmLeaveGroup() {
-    closeModal("leave-group-modal");
-    const groups = getGroups();
-    const g = groups.find(gr => gr.id === activeConv);
-    if (!g || g.permanent) return;
-    g.members = g.members.filter(m => m.toLowerCase() !== currentUser.toLowerCase());
-    saveGroups(groups);
-    activeConv = null;
-    activeIsGroup = false;
-    switchTab("group");
-}
-
-function closeModal(id) { document.getElementById(id).style.display = "none"; }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-window.onload = async function() { if(window.DB) await DB._initPromise;
+window.onload=async function(){
+    const user=localStorage.getItem('loggedInUser');
+    if(!user){window.location.href='Index.html';return;}
 
-    const user = localStorage.getItem("loggedInUser");
-    if (!user) { window.location.href = "Index.html"; return; }
-
-    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const account = accounts.find(a => a.username.toLowerCase() === user.toLowerCase());
-
-    if (!account || !Array.isArray(account.access) || !account.access.includes("Messages")) {
-        document.getElementById("main").innerHTML =
-            '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
+    const account=await dbGetAccount(user);
+    if(!account||!Array.isArray(account.access)||!account.access.includes('Messages')){
+        document.getElementById('main').innerHTML='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
         return;
     }
 
-    currentUser = user;
-    isAdmin = account.access.includes("Admin");
+    currentUser=user;
+    isAdmin=account.access.includes('Admin')||user.toLowerCase()==='restricted';
 
-    ensureSystemGroups(user, account);
+    // Set initial timestamp for polling
+    const latest=await sbReq('GET','messages',null,'order=timestamp.desc&limit=1');
+    _lastMsgTimestamp=latest&&latest[0]?latest[0].timestamp:0;
 
-    if (isAdmin) {
-        const spyTab = document.getElementById("tab-spy");
-        if (spyTab) spyTab.style.display = "";
+    if(isAdmin){
+        const spyTab=document.getElementById('tab-spy');
+        if(spyTab)spyTab.style.display='';
     }
 
-    renderConvList();
-
-    // ── REAL-TIME: receive messages from other users ──────────────────
-    if (window.DB) {
-        DB.onMessage(function() {
-            renderConvList();
-            renderChat();
-        });
-        DB.onKVChange('scpGroups', function(v) {
-            renderConvList();
-        });
-        DB.onKVChange('approvedAccounts', function() {
-            var user = localStorage.getItem('loggedInUser');
-            if(!user) return;
-            var accs = JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-            currentUserData = accs.find(function(a){return a.username.toLowerCase()===user.toLowerCase();});
-        });
-    }
+    await renderConvList();
+    startPolling();
 };
 </script>
 
+<script src="scp_supabase.js"></script>
 <script>
 /* scpTheme-postload */
 (function(){
