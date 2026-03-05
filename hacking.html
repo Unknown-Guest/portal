@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    :root { --scp-green: #3fbf3f; --scp-green-soft: #6fdc6f; --scp-red: #ff3f3f; --scp-gray: #666; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #000; font-family: Arial, sans-serif; color: var(--scp-green); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    #header { width: 100%; border-bottom: 2px solid var(--scp-green); box-shadow: 0 0 12px var(--scp-green), inset 0 0 6px #001a00; padding: 18px 40px; text-align: center; background: #000; flex-shrink: 0; }
+    #header-title { font-size: 28px; font-weight: bold; letter-spacing: 8px; text-shadow: 0 0 10px var(--scp-green), 0 0 2px var(--scp-green); }
+    #header-sub { font-size: 10px; letter-spacing: 2px; color: var(--scp-green-soft); text-shadow: 0 0 4px var(--scp-green-soft); margin-top: 5px; }
+    #navbar { width: 100%; display: flex; border-bottom: 1px solid var(--scp-green); background: #050505; flex-shrink: 0; }
+    .nav-btn { padding: 12px 32px; background: transparent; border: none; border-right: 1px solid var(--scp-green); color: var(--scp-green); font-size: 12px; font-weight: bold; letter-spacing: 2.5px; cursor: pointer; transition: 0.15s; opacity: 0.6; }
+    .nav-btn:hover { opacity: 1; background: #0a1a0a; }
+    .nav-btn.active { opacity: 1; background: var(--scp-green); color: #000; box-shadow: 0 0 10px var(--scp-green); }
+    #nav-refresh { padding: 12px 18px; background: transparent; border: none; border-left: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; cursor: pointer; opacity: 0.5; transition: 0.15s; margin-left: auto; }
+    #nav-refresh:hover { opacity: 1; }
+    #nav-logout { padding: 12px 24px; background: transparent; border: none; border-left: 1px solid var(--scp-green); color: var(--scp-green); font-size: 11px; letter-spacing: 2px; cursor: pointer; opacity: 0.5; transition: 0.15s; }
+    #nav-logout:hover { opacity: 1; color: var(--scp-red); }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    /* SIDEBAR */
+    #sidebar { width: 180px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: #020202; flex-shrink: 0; }
+    #sidebar-label { padding: 14px 16px 10px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray); border-bottom: 1px solid #1a1a1a; }
+    .sidebar-tab { padding: 13px 16px; background: transparent; border: none; border-bottom: 1px solid #1a1a1a; color: var(--scp-green); font-size: 11px; letter-spacing: 1.5px; cursor: pointer; text-align: left; transition: 0.15s; opacity: 0.55; width: 100%; }
+    .sidebar-tab:hover { background: #0a1a0a; opacity: 1; }
+    .sidebar-tab.active { opacity: 1; background: #0a1a0a; border-left: 3px solid var(--scp-green); }
+
+    /* HACK LIST PANEL */
+    #list-panel { width: 280px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: #010101; flex-shrink: 0; }
+    #list-top { display: flex; flex-direction: column; flex-shrink: 0; }
+    #list-label { padding: 10px 14px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray); border-bottom: 1px solid #111; }
+    #list-search { padding: 8px 12px; background: #050505; border: none; border-bottom: 1px solid #111; color: var(--scp-green); font-size: 12px; outline: none; }
+    #list-search::placeholder { color: #2a4a2a; }
+    #add-hack-btn { padding: 10px 14px; background: var(--scp-green); color: #000; border: none; font-size: 10px; font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: 0.15s; }
+    #add-hack-btn:hover { background: #5fff5f; }
+    #hack-list { flex: 1; overflow-y: auto; }
+    .hack-item { padding: 12px 14px; border-bottom: 1px solid #0d0d0d; cursor: pointer; transition: 0.1s; }
+    .hack-item:hover { background: #0a1a0a; }
+    .hack-item.active { background: #0d1f0d; border-left: 3px solid var(--scp-green); }
+    .hack-item-title { font-size: 12px; letter-spacing: 1px; color: var(--scp-green); margin-bottom: 3px; }
+    .hack-item-meta { font-size: 10px; color: var(--scp-gray); }
+    .category-badge { display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 8px; letter-spacing: 0.5px; margin-right: 4px; border: 1px solid; }
+
+    /* VIEW PANEL */
+    #view-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #view-placeholder { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 12px; letter-spacing: 1.5px; color: var(--scp-green-soft); opacity: 0.5; }
+    #view-header { padding: 14px 20px; border-bottom: 1px solid var(--scp-green); background: #020202; flex-shrink: 0; display: flex; align-items: flex-start; gap: 12px; }
+    #view-header-info { flex: 1; }
+    #view-header-name { font-size: 14px; letter-spacing: 2px; text-shadow: 0 0 4px var(--scp-green); }
+    #view-header-meta { font-size: 10px; color: var(--scp-gray); letter-spacing: 1px; margin-top: 4px; }
+    #view-body { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+    .info-block { border: 1px solid #1a1a1a; background: #050505; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .info-block-title { font-size: 10px; letter-spacing: 2.5px; color: var(--scp-green-soft); border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
+    .info-block-body { font-size: 13px; color: var(--scp-green-soft); line-height: 1.7; letter-spacing: 0.5px; white-space: pre-wrap; }
+    .code-block { background: #020a02; border: 1px solid #1a3a1a; padding: 14px; font-family: monospace; font-size: 12px; color: var(--scp-green); line-height: 1.7; white-space: pre-wrap; word-break: break-all; overflow-x: auto; }
+    .hdr-btn { padding: 5px 11px; font-size: 11px; letter-spacing: 1px; cursor: pointer; border: 1px solid; transition: 0.15s; background: transparent; }
+    .hdr-red { color: var(--scp-red); border-color: var(--scp-red); }
+    .hdr-red:hover { background: var(--scp-red); color: #000; }
+
+    /* EMPTY */
+    .empty-msg { padding: 20px 14px; font-size: 11px; color: var(--scp-gray); letter-spacing: 1px; line-height: 1.8; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { border: 2px solid var(--scp-green); background: #000; box-shadow: 0 0 20px var(--scp-green); padding: 26px 30px; width: 420px; display: flex; flex-direction: column; gap: 13px; max-height: 88vh; overflow-y: auto; }
+    .modal-title { font-size: 13px; letter-spacing: 3px; }
+    .modal-lbl { font-size: 10px; letter-spacing: 1.5px; color: var(--scp-green-soft); }
+    .modal-input { width: 100%; padding: 10px 12px; background: #050505; border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; outline: none; font-family: Arial, sans-serif; }
+    .modal-input::placeholder { color: #2a5a2a; }
+    .modal-textarea { width: 100%; padding: 10px 12px; background: #050505; border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 12px; outline: none; font-family: monospace; resize: vertical; min-height: 80px; }
+    .modal-error { color: var(--scp-red); font-size: 11px; min-height: 14px; }
+    .modal-btn { padding: 10px; font-size: 11px; font-weight: bold; letter-spacing: 2px; cursor: pointer; border: none; }
+    .modal-btn.primary { background: var(--scp-green); color: #000; }
+    .modal-btn.primary:hover { background: #5fff5f; }
+    .modal-btn.secondary { background: transparent; border: 1px solid var(--scp-green); color: var(--scp-green); opacity: 0.6; }
+    .modal-btn.secondary:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="header">
+    <div id="header-title">HACKS</div>
+    <div id="header-sub">// PROTECTED WEBSITE //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn active">HACKS</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* lookup-nav-show-injected Show LOOKUP nav button for teachers, admins, and Restricted */
+(function(){
+  var u = localStorage.getItem('loggedInUser');
+  if (!u) return;
+  var access = JSON.parse(localStorage.getItem('_scp_access') || '[]');
+  var role = localStorage.getItem('_scp_role') || 'student';
+  var isT = role === 'teacher';
+  var isA = access.includes('Admin');
+  var isR = u.toLowerCase() === 'restricted';
+  if (isT || isA || isR) {
+    var b = document.getElementById('lookup-nav-btn');
+    if (b) b.style.display = '';
+  }
+})();
+</script>
+</div>
+
+<div id="main">
+    <div id="sidebar">
+        <div id="sidebar-label">CATEGORY</div>
+        <button class="sidebar-tab active" onclick="switchCategory('all')">🔓 ALL HACKS</button>
+        <button class="sidebar-tab" onclick="switchCategory('blooket')">🟦 BLOOKET</button>
+        <button class="sidebar-tab" onclick="switchCategory('kahoot')">📍 KAHOOT</button>
+        <button class="sidebar-tab" onclick="switchCategory('gimkit')">💰 GIMKIT</button>
+        <button class="sidebar-tab" onclick="switchCategory('quizlet')">📖 QUIZLET</button>
+        <button class="sidebar-tab" onclick="switchCategory('other')">⚡ OTHER</button>
+    </div>
+
+    <div id="list-panel">
+        <div id="list-top">
+            <div id="list-label">HACKS</div>
+            <input id="list-search" placeholder="🔍 SEARCH..." oninput="renderHackList()"/>
+            <button id="add-hack-btn" onclick="openAddModal()">+ ADD HACK</button>
+        </div>
+        <div id="hack-list"></div>
+    </div>
+
+    <div id="view-panel">
+        <div id="view-placeholder">// SELECT A HACK //</div>
+    </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="add-modal">
+    <div class="modal-box">
+        <div class="modal-title">ADD HACK</div>
+        <div class="modal-lbl">TITLE</div>
+        <input class="modal-input" id="hack-title" placeholder="e.g. Blooket Auto-Answer" maxlength="80"/>
+        <div class="modal-lbl">CATEGORY</div>
+        <select class="modal-input" id="hack-category" style="cursor:pointer;">
+            <option value="blooket">Blooket</option>
+            <option value="kahoot">Kahoot</option>
+            <option value="gimkit">Gimkit</option>
+            <option value="quizlet">Quizlet</option>
+            <option value="other">Other</option>
+        </select>
+        <div class="modal-lbl">DESCRIPTION / HOW TO USE</div>
+        <textarea class="modal-textarea" id="hack-desc" placeholder="Explain what this hack does and how to use it..." rows="4"></textarea>
+        <div class="modal-lbl">CODE / SCRIPT (optional)</div>
+        <textarea class="modal-textarea" id="hack-code" placeholder="Paste the code or script here..." rows="5" style="font-family:monospace;"></textarea>
+        <div class="modal-error" id="add-error"></div>
+        <button class="modal-btn primary" onclick="submitHack()">▶ SUBMIT HACK</button>
+        <button class="modal-btn secondary" onclick="closeModal('add-modal')">CANCEL</button>
+    </div>
+</div>
+
+<!-- Generic alert/confirm for hacks -->
+<div class="modal-overlay" id="hack-alert-modal">
+    <div class="modal-box">
+        <div class="modal-title" id="hack-alert-title">NOTICE</div>
+        <div class="modal-body" id="hack-alert-body"></div>
+        <div class="modal-actions">
+            <button class="modal-btn primary" onclick="closeHackAlert()">OK</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="hack-confirm-modal">
+    <div class="modal-box">
+        <div class="modal-title" id="hack-confirm-title">CONFIRM</div>
+        <div class="modal-body" id="hack-confirm-body"></div>
+        <div class="modal-actions">
+            <button class="modal-btn" onclick="closeHackConfirm()">CANCEL</button>
+            <button class="modal-btn primary" onclick="hackConfirmYes()">YES</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function getHacks() { return JSON.parse(localStorage.getItem('scpHacks')) || []; }
+function saveHacks(h) { localStorage.setItem('scpHacks', JSON.stringify(h)); }
+
+let currentUser = '';
+let currentUserData = null;
+let isAdmin = false;
+let activeCategory = 'all';
+let activeHackId = null;
+let hackPendingConfirm = null;
+
+const CAT_COLORS = { blooket:'#4488ff', kahoot:'#ff3399', gimkit:'#ffcc00', quizlet:'#3fbf3f', other:'#888' };
+
+function switchCategory(cat) {
+    activeCategory = cat;
+    activeHackId = null;
+    document.querySelectorAll('.sidebar-tab').forEach((b, i) => {
+        b.classList.toggle('active', ['all','blooket','kahoot','gimkit','quizlet','other'][i] === cat);
+    });
+    renderHackList();
+    document.getElementById('view-panel').innerHTML = '<div id="view-placeholder">// SELECT A HACK //</div>';
+}
+
+function renderHackList() {
+    const q = document.getElementById('list-search').value.trim().toLowerCase();
+    let hacks = getHacks();
+    if (activeCategory !== 'all') hacks = hacks.filter(h => h.category === activeCategory);
+    if (q) hacks = hacks.filter(h => h.title.toLowerCase().includes(q) || (h.description || '').toLowerCase().includes(q));
+    hacks.sort((a,b) => b.addedAt - a.addedAt);
+    const el = document.getElementById('hack-list');
+    if (hacks.length === 0) { el.innerHTML = '<div class="empty-msg">// NO HACKS YET //<br/>Be the first to add one!</div>'; return; }
+    el.innerHTML = '';
+    hacks.forEach(h => {
+        const div = document.createElement('div');
+        div.className = 'hack-item' + (h.id === activeHackId ? ' active' : '');
+        div.onclick = () => openHack(h.id);
+        const color = CAT_COLORS[h.category] || '#888';
+        div.innerHTML = `
+            <div class="hack-item-title">${h.title}</div>
+            <div class="hack-item-meta"><span class="category-badge" style="color:${color};border-color:${color};">${h.category.toUpperCase()}</span>by @${h.addedBy}</div>`;
+        el.appendChild(div);
+    });
+}
+
+function openHack(id) {
+    activeHackId = id;
+    renderHackList();
+    const h = getHacks().find(x => x.id === id);
+    if (!h) return;
+    const canDel = isAdmin || h.addedBy.toLowerCase() === currentUser.toLowerCase();
+    const color = CAT_COLORS[h.category] || '#888';
+    const panel = document.getElementById('view-panel');
+    panel.innerHTML = `
+        <div id="view-header">
+            <div id="view-header-info">
+                <div id="view-header-name">${h.title}</div>
+                <div id="view-header-meta">
+                    <span class="category-badge" style="color:${color};border-color:${color};">${h.category.toUpperCase()}</span>
+                    Added by @${h.addedBy} · ${new Date(h.addedAt).toLocaleDateString()}
+                </div>
+            </div>
+            ${canDel ? `<button class="hdr-btn hdr-red" onclick="deleteHack('${h.id}')">✕ DELETE</button>` : ''}
+        </div>
+        <div id="view-body">
+            <div class="info-block">
+                <div class="info-block-title">DESCRIPTION / HOW TO USE</div>
+                <div class="info-block-body">${h.description || '— No description provided —'}</div>
+            </div>
+            ${h.code ? `
+            <div class="info-block">
+                <div class="info-block-title">CODE / SCRIPT</div>
+                <div class="code-block">${h.code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                <button onclick="copyCode('${id}')" style="padding:6px 14px;background:transparent;border:1px solid var(--scp-green);color:var(--scp-green);font-size:10px;letter-spacing:1.5px;cursor:pointer;align-self:flex-start;" >📋 COPY CODE</button>
+            </div>` : ''}
+        </div>`;
+}
+
+function copyCode(id) {
+    const h = getHacks().find(x => x.id === id);
+    if (!h || !h.code) return;
+    navigator.clipboard.writeText(h.code).then(() => showHackAlert('Code copied', 'The hack code has been copied to your clipboard.'));
+}
+
+function deleteHack(id) {
+    const h = getHacks().find(x => x.id === id);
+    const name = h ? h.title : 'this hack';
+    hackOpenConfirm(
+        'Delete hack',
+        `This will permanently delete "${name}" and its code for everyone. This cannot be undone.`,
+        () => {
+            saveHacks(getHacks().filter(h => h.id !== id));
+            activeHackId = null;
+            renderHackList();
+            document.getElementById('view-panel').innerHTML = '<div id="view-placeholder">// SELECT A HACK //</div>';
+        }
+    );
+}
+
+function openAddModal() {
+    document.getElementById('hack-title').value = '';
+    document.getElementById('hack-desc').value = '';
+    document.getElementById('hack-code').value = '';
+    document.getElementById('add-error').innerText = '';
+    document.getElementById('add-modal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function submitHack() {
+    const title = document.getElementById('hack-title').value.trim();
+    const category = document.getElementById('hack-category').value;
+    const description = document.getElementById('hack-desc').value.trim();
+    const code = document.getElementById('hack-code').value.trim();
+    if (!title) { document.getElementById('add-error').innerText = 'Title is required.'; return; }
+    if (!description) { document.getElementById('add-error').innerText = 'Please add a description.'; return; }
+    const hacks = getHacks();
+    hacks.push({ id: Date.now().toString(), title, category, description, code, addedBy: currentUser, addedAt: Date.now() });
+    saveHacks(hacks);
+    closeModal('add-modal');
+    renderHackList();
+}
+
+function showHackAlert(title, message) {
+    document.getElementById('hack-alert-title').innerText = title || 'Notice';
+    document.getElementById('hack-alert-body').innerText = message || '';
+    document.getElementById('hack-alert-modal').classList.add('open');
+}
+
+function closeHackAlert() {
+    document.getElementById('hack-alert-modal').classList.remove('open');
+}
+
+function hackOpenConfirm(title, message, onYes) {
+    hackPendingConfirm = typeof onYes === 'function' ? onYes : null;
+    document.getElementById('hack-confirm-title').innerText = title || 'Confirm';
+    document.getElementById('hack-confirm-body').innerText = message || '';
+    document.getElementById('hack-confirm-modal').classList.add('open');
+}
+
+function closeHackConfirm() {
+    document.getElementById('hack-confirm-modal').classList.remove('open');
+    hackPendingConfirm = null;
+}
+
+function hackConfirmYes() {
+    const fn = hackPendingConfirm;
+    closeHackConfirm();
+    if (fn) fn();
+}
+
+window.onload = function() {
+    const username = localStorage.getItem('loggedInUser');
+    if (!username) { window.location.href = 'Index.html'; return; }
+    currentUser = username;
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    currentUserData = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+    if (!currentUserData || !Array.isArray(currentUserData.access) || !currentUserData.access.includes('Hacks')) {
+        document.getElementById('main').innerHTML = '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
+        return;
+    }
+    // Teachers are completely blocked
+    if (currentUserData.role === 'teacher') {
+        document.getElementById('main').innerHTML = '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
+        return;
+    }
+    isAdmin = currentUserData.access.includes('Admin');
+    // (Teachers already blocked above, no HACKS button needed to hide since this IS the hacks page)
+    renderHackList();
+};
+</script>
+</body>
+</html>

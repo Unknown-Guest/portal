@@ -1,9 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<link rel="stylesheet" href="styles.css">
-<style>#content {
+<style>
+    :root {
+        --scp-green: var(--scp-green);
+        --scp-green-soft: var(--scp-green-soft);
+        --scp-red: #ff3f3f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background-color: #000;
+        font-family: Arial, sans-serif;
+        color: var(--scp-green);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #header {
+        width: 100%;
+        border-bottom: 2px solid var(--scp-green);
+        box-shadow: 0 0 12px var(--scp-green), inset 0 0 6px color-mix(in srgb, var(--scp-green) 8%, transparent);
+        padding: 18px 40px;
+        text-align: center;
+        background: var(--scp-bg, #000);
+        flex-shrink: 0;
+    }
+
+    #header-title {
+        font-size: 28px;
+        font-weight: bold;
+        letter-spacing: 8px;
+        text-shadow: 0 0 10px var(--scp-green), 0 0 2px var(--scp-green);
+    }
+
+    #header-sub {
+        font-size: 10px;
+        letter-spacing: 2px;
+        color: var(--scp-green-soft);
+        text-shadow: 0 0 4px var(--scp-green-soft);
+        margin-top: 5px;
+    }
+
+    #navbar {
+        width: 100%;
+        display: flex;
+        border-bottom: 1px solid var(--scp-green);
+        background: var(--scp-bg, #000);
+        flex-shrink: 0;
+    }
+
+    .nav-btn {
+        padding: 12px 32px;
+        background: transparent;
+        border: none;
+        border-right: 1px solid var(--scp-green);
+        color: var(--scp-green);
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2.5px;
+        cursor: pointer;
+        transition: 0.15s;
+        opacity: 0.6;
+    }
+
+    .nav-btn:hover { opacity: 1; background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .nav-btn.active { opacity: 1; background: var(--scp-green); color: var(--scp-active-text, #000); box-shadow: 0 0 10px var(--scp-green); }
+    .nav-btn.active:hover { background: var(--scp-green); filter: brightness(1.2); }
+
+    #nav-refresh {
+        padding: 12px 18px;
+        background: transparent;
+        border: none;
+        border-left: 1px solid var(--scp-green);
+        color: var(--scp-green);
+        font-size: 13px;
+        cursor: pointer;
+        opacity: 0.5;
+        transition: 0.15s;
+        margin-left: auto;
+    }
+    #nav-refresh:hover { opacity: 1; }
+
+    #nav-logout {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        border-left: 1px solid var(--scp-green);
+        color: var(--scp-green);
+        font-size: 11px;
+        letter-spacing: 2px;
+        cursor: pointer;
+        opacity: 0.5;
+        transition: 0.15s;
+    }
+    #nav-logout:hover { opacity: 1; color: var(--scp-red); }
+
+    #content {
         flex: 1;
         overflow-y: auto;
         display: flex;
@@ -329,7 +425,7 @@ window.addEventListener('unhandledrejection', function(e) {
             }
 
             if (changed) {
-                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                (window.DB ? DB.save('approvedAccounts', accounts) : localStorage.setItem('approvedAccounts', JSON.stringify(accounts)));
                 // Update integrity
                 try {
                     var d = localStorage.getItem('approvedAccounts') || '[]';
@@ -538,6 +634,7 @@ window.addEventListener('unhandledrejection', function(e) {
 })();
 </script>
 
+<script src="db.js"></script>
 </head>
 <body>
 
@@ -1026,7 +1123,7 @@ function saveTheme() {
         if (_tu) {
             const _ta = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
             const _tm = _ta.find(a => a.username.toLowerCase() === _tu.toLowerCase());
-            if (_tm) { _tm.theme = { bg, accent }; localStorage.setItem('approvedAccounts', JSON.stringify(_ta)); }
+            if (_tm) { _tm.theme = { bg, accent }; (window.DB ? DB.save('approvedAccounts', _ta) : localStorage.setItem('approvedAccounts', JSON.stringify(_ta))); }
         }
     } catch(e) {}
     applyThemeNow(bg, accent);
@@ -1062,7 +1159,7 @@ function resetTheme() {
         if (_ru) {
             const _ra = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
             const _rm = _ra.find(a => a.username.toLowerCase() === _ru.toLowerCase());
-            if (_rm) { delete _rm.theme; localStorage.setItem('approvedAccounts', JSON.stringify(_ra)); }
+            if (_rm) { delete _rm.theme; (window.DB ? DB.save('approvedAccounts', _ra) : localStorage.setItem('approvedAccounts', JSON.stringify(_ra))); }
         }
     } catch(e) {}
 
@@ -1124,7 +1221,8 @@ function confirmDeleteAccount() {
     window.location.href = "Index.html";
 }
 
-window.onload = function() {
+window.onload = async function() { if(window.DB) await DB._initPromise;
+
     const user = localStorage.getItem("loggedInUser");
     if (!user) { window.location.href = "Index.html"; return; }
     currentUser = user.toLowerCase();

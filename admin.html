@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <script>
 (function(){
     var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
@@ -12,8 +11,51 @@
     if(t.accent){document.documentElement.style.setProperty('--scp-green',t.accent);document.documentElement.style.setProperty('--scp-green-soft',t.accent);}
 })();
 </script>
-<link rel="stylesheet" href="styles.css">
-<style>.section-header {
+<style>
+    :root {
+        --scp-bg: #000;
+        --scp-green: #3fbf3f;
+        --scp-green-soft: #6fdc6f;
+        --scp-red: #ff3f3f;
+        --scp-gray: #888;
+        --scp-gold: #ffcc00;
+        --scp-orange: #ff9900;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background-color: var(--scp-bg, #000);
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        color: var(--scp-green);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    h1 {
+        font-size: 28px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 6px;
+        letter-spacing: 8px;
+        color: var(--scp-green);
+        text-shadow: 0 0 8px var(--scp-green), 0 0 2px var(--scp-green);
+    }
+
+    #page-sub {
+        text-align: center;
+        font-size: 10px;
+        color: var(--scp-green-soft);
+        margin-bottom: 24px;
+        letter-spacing: 1.5px;
+        text-shadow: 0 0 4px var(--scp-green-soft);
+    }
+
+    .section-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -156,6 +198,18 @@
     .deleted-badge { font-size: 10px; padding: 2px 6px; border: 1px solid #555; color: #888; letter-spacing: 1px; margin-left: 8px; }
 
     /* ── NAVBAR ── */
+    #header { width: 100%; border-bottom: 2px solid var(--scp-green); box-shadow: 0 0 12px var(--scp-green), inset 0 0 6px color-mix(in srgb, var(--scp-green) 8%, transparent); padding: 18px 40px; text-align: center; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #header-title { font-size: 28px; font-weight: bold; letter-spacing: 8px; text-shadow: 0 0 10px var(--scp-green), 0 0 2px var(--scp-green); }
+    #header-sub { font-size: 10px; letter-spacing: 2px; color: var(--scp-green-soft); text-shadow: 0 0 4px var(--scp-green-soft); margin-top: 5px; }
+    #navbar { width: 100%; display: flex; border-bottom: 1px solid var(--scp-green); background: var(--scp-bg, #000); flex-shrink: 0; }
+    .nav-btn { padding: 12px 32px; background: transparent; border: none; border-right: 1px solid var(--scp-green); color: var(--scp-green); font-size: 12px; font-weight: bold; letter-spacing: 2.5px; cursor: pointer; transition: 0.15s; opacity: 0.6; }
+    .nav-btn:hover { opacity: 1; background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .nav-btn.active { opacity: 1; background: var(--scp-green); color: var(--scp-active-text, #000); box-shadow: 0 0 10px var(--scp-green); }
+    #nav-refresh { padding: 12px 18px; background: transparent; border: none; border-left: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; cursor: pointer; opacity: 0.5; transition: 0.15s; margin-left: auto; }
+    #nav-refresh:hover { opacity: 1; }
+    #nav-logout { padding: 12px 24px; background: transparent; border: none; border-left: 1px solid var(--scp-green); color: var(--scp-green); font-size: 11px; letter-spacing: 2px; cursor: pointer; opacity: 0.5; transition: 0.15s; }
+    #nav-logout:hover { opacity: 1; color: var(--scp-red); }
+
     .long-overflow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
     #admin-content { flex: 1; overflow-y: auto; padding: 32px 40px 60px; min-height: 0; }
@@ -313,7 +367,7 @@ window.addEventListener('unhandledrejection', function(e) {
                 if (_vm) {
                     if (!Array.isArray(_vm.violations)) _vm.violations = [];
                     _vm.violations.push(vEntry);
-                    localStorage.setItem('approvedAccounts', JSON.stringify(_va));
+                    (window.DB ? DB.save("approvedAccounts", _va) : localStorage.setItem("approvedAccounts", JSON.stringify(_va)));
                 }
             } catch(e) {}
         } catch(e) {}
@@ -326,7 +380,7 @@ window.addEventListener('unhandledrejection', function(e) {
                 acc.suspended = true;
                 acc.suspendedAt = new Date().toISOString();
                 acc.suspendReason = 'Attempted unauthorised access to Admin Panel';
-                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                (window.DB ? DB.save("approvedAccounts", accounts) : localStorage.setItem("approvedAccounts", JSON.stringify(accounts)));
                 try { var d=localStorage.getItem('approvedAccounts')||'[]',h=5381; for(var i=0;i<d.length;i++) h=((h<<5)+h)^d.charCodeAt(i); localStorage.setItem('_ic',(h>>>0).toString(36)); } catch(e) {}
             }
         } catch(e) {}
@@ -520,6 +574,7 @@ window.addEventListener('unhandledrejection', function(e) {
 })();
 </script>
 
+<script src="db.js"></script>
 </head>
 <body>
 
@@ -756,7 +811,7 @@ function toggleCodeVisibility() {
 function f0ee1z6JJc() {
     const val = document.getElementById('teacher-code-input').value.trim();
     if (!val) return;
-    localStorage.setItem('scpTeacherCode', val);
+    if(window.DB) DB.save('scpTeacherCode', val); else localStorage.setItem('scpTeacherCode', val);;
     const s = document.getElementById('code-save-status');
     s.innerText = '✓ Saved'; setTimeout(() => s.innerText = '', 2000);
 }
@@ -794,7 +849,7 @@ function getRoleBadge(entry) {
 
 function safeArray(v) { return Array.isArray(v) ? v : []; }
 function getGroups() { return JSON.parse(localStorage.getItem("scpGroups")) || []; }
-function saveGroups(g) { localStorage.setItem("scpGroups", JSON.stringify(g)); }
+function saveGroups(g) { (window.DB ? DB.save("scpGroups", g) : localStorage.setItem("scpGroups", JSON.stringify(g))); }
 
 function ensureSystemGroups(username) {
     const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
@@ -862,7 +917,7 @@ function auditLog(action, target) {
         var adminUser = localStorage.getItem('loggedInUser') || 'unknown';
         logs.push({ time: new Date().toISOString(), admin: adminUser, action: action, target: target });
         if (logs.length > 500) logs = logs.slice(logs.length - 500); // keep last 500
-        localStorage.setItem('scpAuditLog', JSON.stringify(logs));
+        (window.DB ? DB.save("scpAuditLog", logs) : localStorage.setItem("scpAuditLog", JSON.stringify(logs)));
     } catch(e) {}
 }
 
@@ -904,7 +959,7 @@ function c1eoPni6JD(index) {
     const accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
     if (!accounts[index]) return;
     accounts[index].hidden = !accounts[index].hidden;
-    localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+    (window.DB ? DB.save("approvedAccounts", accounts) : localStorage.setItem("approvedAccounts", JSON.stringify(accounts)));
     Pgyv1plBAr();
 }
 
@@ -1019,19 +1074,19 @@ function PCqpIqK3yn(index) {
         favorite: false, redacted: false, hidden: true
     });
     pending.splice(index, 1);
-    localStorage.setItem("pendingAccounts", JSON.stringify(pending));
+    (window.DB ? DB.save("pendingAccounts", pending) : localStorage.setItem("pendingAccounts", JSON.stringify(pending)));
     (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
     ensureSystemGroups(u.username);
     let delList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
     delList = delList.filter(d => d.username.toLowerCase() !== u.username.toLowerCase());
-    localStorage.setItem("deletedAccounts", JSON.stringify(delList));
+    (window.DB ? DB.save("deletedAccounts", delList) : localStorage.setItem("deletedAccounts", JSON.stringify(delList)));
     YDzfOvz1dO(); Pgyv1plBAr(); p2eY1gOHaf();
 }
 
 function iFfcgMXAdx(index) {
     let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
     pending.splice(index, 1);
-    localStorage.setItem("pendingAccounts", JSON.stringify(pending));
+    (window.DB ? DB.save("pendingAccounts", pending) : localStorage.setItem("pendingAccounts", JSON.stringify(pending)));
     YDzfOvz1dO();
 }
 
@@ -1051,7 +1106,7 @@ function DG81aSQHqN(index) {
         deletedAt: Date.now(),
         deletedBy: 'admin'
     });
-    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+    (window.DB ? DB.save("deletedAccounts", deletedList) : localStorage.setItem("deletedAccounts", JSON.stringify(deletedList)));
 
     let groups = getGroups();
     groups.forEach(g => { g.members = g.members.filter(m => m.toLowerCase() !== deletedUsername); });
@@ -1062,7 +1117,7 @@ function DG81aSQHqN(index) {
         if (m.groupId) return true;
         return !(m.from && m.from.toLowerCase() === deletedUsername) && !(m.to && m.to.toLowerCase() === deletedUsername);
     });
-    localStorage.setItem("scpMessages", JSON.stringify(msgs));
+    (window.DB ? DB.save("scpMessages", msgs) : localStorage.setItem("scpMessages", JSON.stringify(msgs)));
 
     const convs = (JSON.parse(localStorage.getItem("scpDMConvs")) || []).filter(c => !c.includes(deletedUsername));
     localStorage.setItem("scpDMConvs", JSON.stringify(convs));
@@ -1110,7 +1165,7 @@ function p2eY1gOHaf() {
 function OsNLjVHWGa(index) {
     let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
     deletedList.splice(index, 1);
-    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+    (window.DB ? DB.save("deletedAccounts", deletedList) : localStorage.setItem("deletedAccounts", JSON.stringify(deletedList)));
     p2eY1gOHaf();
 }
 
@@ -1118,7 +1173,7 @@ function uEgw9YooJe(index) {
     if (!confirm("Permanently remove this deleted account record?")) return;
     let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
     deletedList.splice(index, 1);
-    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+    (window.DB ? DB.save("deletedAccounts", deletedList) : localStorage.setItem("deletedAccounts", JSON.stringify(deletedList)));
     p2eY1gOHaf();
 }
 
@@ -1241,12 +1296,20 @@ function _debounce(fn, delay) {
 }
 var _debouncedLoad = _debounce(Pgyv1plBAr, 200);
 
-YDzfOvz1dO();
-Pgyv1plBAr();
-p2eY1gOHaf();
-W0kEnydx9q();
-loadAuditLog();
-document.getElementById('teacher-code-input').value = getTeacherCode();
+(async function() {
+    if (window.DB) await DB._initPromise;
+    YDzfOvz1dO();
+    Pgyv1plBAr();
+    p2eY1gOHaf();
+    W0kEnydx9q();
+    loadAuditLog();
+    document.getElementById('teacher-code-input').value = getTeacherCode();
+    // Auto-refresh pending requests when another user registers
+    if (window.DB) {
+        DB.onKVChange('pendingAccounts', function() { p2eY1gOHaf(); });
+        DB.onKVChange('approvedAccounts', function() { Pgyv1plBAr(); });
+    }
+})();
 </script>
 </div>
 </body>

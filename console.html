@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<link rel="stylesheet" href="styles.css">
-<style>#main { display: flex; flex: 1; overflow: hidden; background: var(--scp-bg, #000); }
+<style>
+    :root { --scp-green: var(--scp-green); --scp-green-soft: var(--scp-green-soft); --scp-red: #ff3f3f; --scp-gray: #555; --scp-gold: #ffcc00; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--scp-bg, #000); font-family: Arial, sans-serif; color: var(--scp-green); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    #header { width: 100%; border-bottom: 2px solid var(--scp-green); box-shadow: 0 0 12px var(--scp-green); padding: 18px 40px; text-align: center; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #header-title { font-size: 28px; font-weight: bold; letter-spacing: 8px; text-shadow: 0 0 10px var(--scp-green); }
+    #header-sub { font-size: 10px; letter-spacing: 2px; color: var(--scp-green-soft); margin-top: 5px; }
+    #navbar { width: 100%; display: flex; border-bottom: 1px solid var(--scp-green); background: var(--scp-bg, #000); flex-shrink: 0; }
+    .nav-btn { padding: 12px 32px; background: transparent; border: none; border-right: 1px solid var(--scp-green); color: var(--scp-green); font-size: 12px; font-weight: bold; letter-spacing: 2.5px; cursor: pointer; transition: 0.15s; opacity: 0.6; }
+    .nav-btn:hover { opacity: 1; background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .nav-btn.active { opacity: 1; background: var(--scp-green); color: var(--scp-active-text, #000); box-shadow: 0 0 10px var(--scp-green); }
+    #nav-refresh { padding: 12px 18px; background: transparent; border: none; border-left: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; cursor: pointer; opacity: 0.5; transition: 0.15s; margin-left: auto; }
+    #nav-refresh:hover { opacity: 1; }
+    #nav-logout { padding: 12px 24px; background: transparent; border: none; border-left: 1px solid var(--scp-green); color: var(--scp-green); font-size: 11px; letter-spacing: 2px; cursor: pointer; opacity: 0.5; transition: 0.15s; }
+    #nav-logout:hover { opacity: 1; color: var(--scp-red); }
+    #main { display: flex; flex: 1; overflow: hidden; background: var(--scp-bg, #000); }
 
     /* ── SIDEBAR ── */
     #file-sidebar { width: 235px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; overflow: hidden; }
@@ -498,6 +512,7 @@ window.addEventListener('unhandledrejection', function(e) {
 })();
 </script>
 
+<script src="db.js"></script>
 </head>
 <body>
 
@@ -1316,7 +1331,8 @@ function updateHighlight(){
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
-window.onload=function(){
+window.onload = async function() { if(window.DB) await DB._initPromise;
+
     var username=localStorage.getItem('loggedInUser');if(!username){window.location.href='Index.html';return;}
     currentUser=username;
     var accts=JSON.parse(localStorage.getItem('approvedAccounts'))||[];

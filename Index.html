@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <script>
 /* scpTheme-apply — run before paint so there's no colour flash on login page */
 (function(){
@@ -22,9 +21,9 @@
     }
 })();
 </script>
-<link rel="stylesheet" href="styles.css">
 <style>
-    body { background-color: var(--scp-bg, #000); margin: 0; padding: 40px 20px 60px; font-family: Arial, sans-serif; color: var(--scp-green); display: flex; flex-direction: row; justify-content: center; align-items: flex-start; height: auto; min-height: 100vh; overflow: auto; box-sizing: border-box; }
+    :root { --scp-green: #3fbf3f; --scp-green-soft: #6fdc6f; --scp-red: #ff3f3f; }
+    body { background-color: var(--scp-bg, #000); margin: 0; padding: 40px 20px 60px; font-family: Arial, sans-serif; color: var(--scp-green); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; box-sizing: border-box; }
     #auth-box { width: 320px; padding: 22px 26px; border: 2px solid var(--scp-green); background-color: var(--scp-bg, #000); box-shadow: 0 0 10px var(--scp-green), inset 0 0 2px var(--scp-green); }
     #auth-title { font-size: 26px; font-weight: bold; text-align: center; margin-bottom: 5px; letter-spacing: 8px; color: var(--scp-green); text-shadow: 0 0 8px var(--scp-green), 0 0 2px var(--scp-green); }
     #auth-sub { text-align: center; font-size: 10px; color: var(--scp-green-soft); margin-bottom: 16px; letter-spacing: 1.5px; text-shadow: 0 0 4px var(--scp-green-soft); }
@@ -37,8 +36,6 @@
     .auth-input { width: 100%; padding: 10px 12px; background: color-mix(in srgb, var(--scp-bg, #000) 85%, #fff); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; box-sizing: border-box; text-shadow: 0 0 2px var(--scp-green); box-shadow: inset 0 0 4px #001a00; outline: none; }
     .auth-input::placeholder { color: #2a7a2a; }
     .toggle-pass { position: absolute; right: 10px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; opacity: 0.7; }
-    input[type="password"]::-ms-reveal, input[type="password"]::-ms-clear { display: none; }
-    input[type="password"]::-webkit-credentials-auto-fill-button { display: none; }
     .toggle-pass:hover { opacity: 1; }
     .toggle-pass svg { width: 18px; height: 18px; stroke: var(--scp-green); fill: none; stroke-width: 1.8; filter: drop-shadow(0 0 2px var(--scp-green)); }
     .auth-btn { width: 100%; padding: 10px; background: var(--scp-green); color: #000; border: none; font-weight: bold; cursor: pointer; margin-bottom: 8px; font-size: 13px; letter-spacing: 2px; box-shadow: 0 0 8px var(--scp-green); }
@@ -277,6 +274,9 @@ window.addEventListener('unhandledrejection', function(e) {
             if (!window._scpAESKey || !PROTECTED_KEYS.includes(storageKey)) {
                 // Fall back to plain if key not ready
                 localStorage.setItem(storageKey, JSON.stringify(value));
+                if (window.DB && ['approvedAccounts','pendingAccounts','deletedAccounts'].indexOf(storageKey) >= 0) {
+                    DB.save(storageKey, value);
+                }
                 return;
             }
             var json = JSON.stringify(value);
@@ -319,6 +319,7 @@ window.addEventListener('unhandledrejection', function(e) {
 })();
 </script>
 
+<script src="db.js"></script>
 </head>
 <body>
 
@@ -670,6 +671,7 @@ async function authLogin() {
 
 // ── SEED RESTRICTED & INIT ────────────────────────────────────────────────────
 (async function() {
+    if (window.DB) await DB._initPromise;
     if (sessionStorage.getItem('_tamper') === '1') {
         showError('⚠ Data integrity warning — storage may have been modified externally.');
         sessionStorage.removeItem('_tamper');
