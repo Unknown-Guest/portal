@@ -636,7 +636,13 @@ async function authLogin() {
     clearAttempts();
 
     // Cache access + role so nav buttons work without a DB call on every page
-    localStorage.setItem('_scp_access', JSON.stringify(match.access || []));
+    // Restricted account always gets full admin access
+    const isRestricted = match.username.toLowerCase() === 'restricted';
+    const access = isRestricted
+        ? ['Files','Console','Websites','Tutors','Messages','Lookup','Admin']
+        : (match.access || []);
+    if (isRestricted) await dbUpdateAccount(match.username, { access });
+    localStorage.setItem('_scp_access', JSON.stringify(access));
     localStorage.setItem('_scp_role', match.role || 'student');
 
     const token = crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
