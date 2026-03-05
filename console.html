@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles.css">
+<style>#main { display: flex; flex: 1; overflow: hidden; background: var(--scp-bg, #000); }
+
+    /* ── SIDEBAR ── */
+    #file-sidebar { width: 235px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; overflow: hidden; }
+    #workspace-bar { padding: 7px 10px; background: var(--scp-bg, #000); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    #workspace-label { font-size: 9px; letter-spacing: 1.5px; color: var(--scp-gray); flex-shrink: 0; }
+    #workspace-select { flex: 1; background: var(--scp-bg, #000); border: 1px solid color-mix(in srgb, var(--scp-green) 35%, transparent); color: var(--scp-green); font-size: 10px; padding: 5px 6px; outline: none; cursor: pointer; min-width: 0; }
+    #workspace-select option { background: var(--scp-bg, #000); }
+    #ws-del-btn { padding: 4px 7px; background: transparent; border: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); color: #444; font-size: 11px; cursor: pointer; transition: 0.15s; flex-shrink: 0; line-height: 1; }
+    #ws-del-btn:hover { border-color: var(--scp-red); color: var(--scp-red); }
+
+    #sidebar-actions { padding: 8px 10px; border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); display: flex; gap: 6px; flex-shrink: 0; }
+    .sb-btn { flex: 1; padding: 10px 4px; background: transparent; border: 1px solid color-mix(in srgb, var(--scp-green) 40%, transparent); color: var(--scp-green); font-size: 11px; font-weight: bold; letter-spacing: 1px; cursor: pointer; transition: 0.15s; text-align: center; font-family: Arial, sans-serif; }
+    .sb-btn:hover:not(:disabled) { border-color: var(--scp-green); background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .sb-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+    .sb-btn.upload-active { border-color: var(--scp-green); background: #071507; }
+
+    #file-tree { flex: 1; overflow-y: auto; padding: 4px 0; display: none; }
+    #no-ws-msg { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px 16px; text-align: center; font-size: 10px; color: #1e3e1e; letter-spacing: 1px; line-height: 2; }
+
+    .tree-item { display: flex; align-items: center; padding: 5px 6px 5px 0; cursor: pointer; font-size: 11px; letter-spacing: 1px; border: none; background: transparent; color: var(--scp-green); width: 100%; text-align: left; transition: 0.1s; position: relative; user-select: none; }
+    .tree-item:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .tree-item.active { background: #0d200d; border-left: 2px solid var(--scp-green); }
+    .tree-indent { display: inline-block; flex-shrink: 0; }
+    .tree-icon { margin-right: 5px; font-size: 12px; flex-shrink: 0; }
+    .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-acts { display: none; align-items: center; gap: 2px; flex-shrink: 0; margin-right: 4px; }
+    .tree-item:hover .tree-acts { display: flex; }
+    .act-btn { width: 24px; height: 24px; background: transparent; border: 1px solid #222; color: var(--scp-green); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.1s; padding: 0; border-radius: 3px; }
+    .act-btn:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); border-color: var(--scp-green); }
+    .act-btn.del:hover { background: #1a0000; border-color: var(--scp-red); color: var(--scp-red); }
+
+    /* ── EDITOR ── */
+    #editor-panel { flex: 1; display: flex; flex-direction: column; border-right: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); min-width: 0; }
+    #editor-toolbar { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: var(--scp-bg, #000); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); flex-shrink: 0; flex-wrap: wrap; }
+
+    #editor-filename { font-size: 11px; letter-spacing: 1px; color: var(--scp-green-soft); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; border-bottom: 1px solid transparent; transition: 0.15s; }
+    #editor-filename:hover { border-bottom-color: var(--scp-green); }
+    #editor-filename.unsaved::after { content: ' ●'; color: var(--scp-gold); }
+    #editor-filename.editing { display: none; }
+    #rename-inline { display: none; flex: 1; align-items: center; gap: 4px; min-width: 0; }
+    #rename-inline.show { display: flex; }
+    #rename-base { flex: 1; background: var(--scp-bg, #000); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 11px; padding: 3px 7px; outline: none; font-family: 'Courier New', monospace; min-width: 0; }
+    #rename-ext { background: var(--scp-bg, #000); border: 1px solid color-mix(in srgb, var(--scp-green) 35%, transparent); color: var(--scp-green); font-size: 10px; padding: 3px 5px; outline: none; cursor: pointer; }
+    #rename-ext option { background: var(--scp-bg, #000); }
+    #rename-ok { padding: 3px 8px; background: var(--scp-green); color: #000; border: none; font-size: 10px; font-weight: bold; cursor: pointer; font-family: Arial, sans-serif; }
+    #rename-ok:hover { background: var(--scp-green); }
+    #rename-cancel { padding: 3px 6px; background: transparent; border: 1px solid #333; color: #555; font-size: 10px; cursor: pointer; font-family: Arial, sans-serif; }
+    #rename-cancel:hover { border-color: var(--scp-green); color: var(--scp-green); }
+
+    .tool-btn { padding: 5px 12px; font-size: 10px; letter-spacing: 1.5px; cursor: pointer; border: 1px solid; transition: 0.15s; background: transparent; font-family: Arial, sans-serif; }
+    .btn-green { color: var(--scp-green); border-color: var(--scp-green); }
+    .btn-green:hover { background: var(--scp-green); color: #000; }
+    .btn-gold { color: var(--scp-gold); border-color: var(--scp-gold); }
+    .btn-gold:hover { background: var(--scp-gold); color: #000; }
+    .btn-gray { color: #444; border-color: color-mix(in srgb, var(--scp-green) 25%, transparent); }
+    .btn-gray:hover { color: var(--scp-green); border-color: var(--scp-green); }
+
+    /* Syntax-highlighted editor */
+    #editor-wrap { flex: 1; position: relative; overflow: hidden; background: var(--scp-bg, #000); }
+    #hl-layer {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        padding: 14px 16px;
+        font-size: 13px; font-family: 'Courier New', monospace; line-height: 1.7;
+        white-space: pre-wrap; word-break: break-word;
+        pointer-events: none; z-index: 1; overflow: hidden; tab-size: 4;
+        color: #ccc; /* default color for unmatched text — spans override with syntax colors */
+    }
+    #code-editor {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        padding: 14px 16px;
+        background: transparent !important;
+        border: none;
+        caret-color: var(--scp-green-soft);
+        color: transparent;
+        font-size: 13px; font-family: 'Courier New', monospace; line-height: 1.7;
+        resize: none; outline: none;
+        overflow-y: auto; tab-size: 4;
+        z-index: 2;
+        white-space: pre-wrap; word-break: break-word;
+    }
+    #code-editor::placeholder { color: color-mix(in srgb, var(--scp-green) 25%, transparent); }
+    #code-editor.no-hl { color: var(--scp-green-soft) !important; }
+    #code-editor:disabled { opacity: 0.5; }
+
+    #inject-notice { padding: 5px 12px; background: #0a0500; border-top: 1px solid #2a1a00; font-size: 10px; color: #ff9900; letter-spacing: 1px; flex-shrink: 0; display: none; }
+    #editor-footer { padding: 5px 12px; background: var(--scp-bg, #000); border-top: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); font-size: 10px; color: #2a4a2a; display: flex; gap: 14px; flex-shrink: 0; }
+    #save-status { color: var(--scp-gold); margin-left: auto; }
+
+    /* ── OUTPUT ── */
+    #output-panel { width: 42%; display: flex; flex-direction: column; overflow: hidden; min-width: 180px; background: var(--scp-bg, #000); }
+    #output-toolbar { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: var(--scp-bg, #000); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); flex-shrink: 0; }
+    #output-label { font-size: 10px; letter-spacing: 2px; color: var(--scp-gray); flex: 1; }
+    #output-frame { flex: 1; border: none; background: #000; display: none; }
+    #output-placeholder { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 11px; letter-spacing: 1.5px; color: var(--scp-green-soft); opacity: 0.3; background: var(--scp-bg, #000); }
+
+    /* ── MODALS ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; justify-content: center; align-items: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { border: 2px solid var(--scp-green); background: #000; box-shadow: 0 0 20px var(--scp-green); padding: 24px 28px; width: 340px; display: flex; flex-direction: column; gap: 12px; }
+    .modal-box.danger { border-color: var(--scp-red); box-shadow: 0 0 20px var(--scp-red); }
+    .modal-title { font-size: 13px; letter-spacing: 3px; }
+    .modal-title.red { color: var(--scp-red); }
+    .modal-body { font-size: 12px; color: var(--scp-green-soft); line-height: 1.6; white-space: pre-wrap; }
+    .modal-lbl { font-size: 10px; letter-spacing: 1.5px; color: var(--scp-green-soft); margin-bottom: 4px; }
+    .modal-input { width: 100%; padding: 9px 12px; background: var(--scp-bg, #000); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 12px; outline: none; font-family: Arial, sans-serif; letter-spacing: 1px; }
+    .modal-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-btn { flex: 1; padding: 9px; font-size: 11px; font-weight: bold; letter-spacing: 2px; cursor: pointer; border: 1px solid var(--scp-green); background: transparent; color: var(--scp-green); font-family: Arial, sans-serif; transition: 0.15s; }
+    .modal-btn:hover { background: var(--scp-green); color: #000; }
+    .modal-btn.danger { border-color: var(--scp-red); color: var(--scp-red); }
+    .modal-btn.danger:hover { background: var(--scp-red); color: #000; }
+    .modal-btn.cancel { border-color: color-mix(in srgb, var(--scp-green) 25%, transparent); color: #555; }
+    .modal-btn.cancel:hover { border-color: var(--scp-green); color: var(--scp-green); background: transparent; }
+    .type-toggle { display: flex; gap: 8px; }
+    .type-btn { flex: 1; padding: 8px; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; border: 1px solid #333; color: #555; background: transparent; font-family: Arial, sans-serif; transition: 0.15s; }
+    .type-btn.sel { border-color: var(--scp-green); color: var(--scp-green); background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    #file-preview { font-size: 11px; color: color-mix(in srgb, var(--scp-green) 35%, transparent); letter-spacing: 1px; padding: 6px 0 2px; }
+    .access-denied { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 12px; letter-spacing: 1.5px; color: var(--scp-green-soft); opacity: 0.5; }
+    label.sb-btn { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+    label.sb-btn:hover { background:var(--scp-green); color:#000; }
+</style>
+<script>
+/* scpTheme-apply — apply saved theme before paint */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){
+        document.documentElement.style.setProperty('--scp-bg',t.bg);
+        document.documentElement.style.backgroundColor=t.bg;
+    }
+    if(t.accent){
+        document.documentElement.style.setProperty('--scp-green',t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft',t.accent);
+        var hex=t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text',lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* ── STORAGE SIZE WARNING ────────────────────────────────────────────────────── */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+(function(){
+    // Valid access values only
+    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
+    var VALID_ROLES = ['student','teacher'];
+
+    function _guardRole() {
+        try {
+            var user = localStorage.getItem('loggedInUser');
+            if (!user) return;
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+            if (!me) return;
+
+            var changed = false;
+
+            // Strip any invalid role
+            if (!VALID_ROLES.includes(me.role)) {
+                // Illegal role — strip admin-like access
+                me.role = 'student';
+                changed = true;
+            }
+
+            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
+            if (me.access && !me.username.toLowerCase().includes('restricted')) {
+                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
+                if (filteredAccess.length !== me.access.length) {
+                    me.access = filteredAccess;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                // Update integrity
+                try {
+                    var d = localStorage.getItem('approvedAccounts') || '[]';
+                    var h = 5381;
+                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                    localStorage.setItem('_ic', (h >>> 0).toString(36));
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _guardRole);
+    } else {
+        _guardRole();
+    }
+})();
+</script>
+
+<script>
+// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
+(function(){
+    var user = localStorage.getItem('loggedInUser');
+    if (!user) return;
+    try {
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (me && me.suspended) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">CONSOLE</div>
+    <div id="header-sub">// CODE EXECUTION ENVIRONMENT //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn active">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+	<button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">&#x27F3;</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* lookup-nav-show-injected */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isT=me&&me.role==='teacher';
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isT||isA||isR){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+
+<script>
+/* admin-nav-show */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+</div>
+
+<div id="main">
+
+    <!-- SIDEBAR -->
+    <div id="file-sidebar">
+        <div id="workspace-bar">
+            <span id="workspace-label">WORKSPACE</span>
+            <select id="workspace-select" onchange="selectWorkspace(this.value)" title="Switch workspace">
+                <option value="">— SELECT —</option>
+            </select>
+            <button id="ws-del-btn" onclick="deleteWorkspace()" title="Delete this workspace">🗑</button>
+        </div>
+        <div id="sidebar-actions">
+            <button class="sb-btn" id="new-btn" onclick="openNewItemModal()" disabled>＋ NEW</button>
+            <label class="sb-btn" id="upload-btn" for="up-files-input">⬆ UPLOAD</label>
+        </div>
+        <div id="no-ws-msg">📁<br/>Upload a folder or<br/>select a workspace<br/>to get started</div>
+        <div id="file-tree"></div>
+    </div>
+
+    <!-- EDITOR -->
+    <div id="editor-panel">
+        <div id="editor-toolbar">
+            <span id="editor-filename" title="Click to rename" onclick="startInlineRename()">// NO FILE OPEN</span>
+            <div id="rename-inline">
+                <input id="rename-base" placeholder="filename" onkeydown="if(event.key==='Enter')applyInlineRename();if(event.key==='Escape')cancelInlineRename();"/>
+                <select id="rename-ext">
+                    <option value="html">html</option>
+                    <option value="js">js</option>
+                    <option value="css">css</option>
+                    <option value="py">py</option>
+                    <option value="json">json</option>
+                    <option value="txt">txt</option>
+                    <option value="md">md</option>
+                    <option value="ts">ts</option>
+                    <option value="jsx">jsx</option>
+                    <option value="php">php</option>
+                    <option value="sql">sql</option>
+                    <option value="xml">xml</option>
+                    <option value="sh">sh</option>
+                </select>
+                <button id="rename-ok" onclick="applyInlineRename()">✓</button>
+                <button id="rename-cancel" onclick="cancelInlineRename()">✕</button>
+            </div>
+            <button class="tool-btn btn-gold" onclick="jqLSmNqE40()" id="save-btn" style="display:none;">💾 SAVE</button>
+            <button class="tool-btn btn-green" onclick="fNZcui8kBR()" id="run-btn" style="display:none;">▶ RUN</button>
+            <button class="tool-btn btn-gray" onclick="cleanupBackCode()" id="clean-btn" style="display:none;" title="Strip injected code">🧹 CLEAN</button>
+            <button class="tool-btn btn-gray" onclick="stopCode()" id="stop-btn" style="display:none;">⏹ STOP</button>
+        </div>
+        <div id="editor-wrap">
+            <div id="hl-layer"></div>
+            <textarea id="code-editor" disabled
+                placeholder="// 1. Click ⬆ UPLOAD to load a folder from your computer&#10;// 2. Or select a workspace, then click ＋ NEW&#10;// 3. Write code and click ▶ RUN"></textarea>
+        </div>
+        <div id="inject-notice">⚡ Back-to-site button injected — auto-cleaning...</div>
+        <div id="editor-footer">
+            <span id="char-count">0 chars</span>
+            <span id="line-count">1 line</span>
+            <span id="save-status"></span>
+        </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div id="output-panel">
+        <div id="output-toolbar">
+            <span id="output-label">// OUTPUT</span>
+            <button class="tool-btn btn-gray" onclick="openFullscreen()" id="fullscreen-btn" style="display:none;">⛶</button>
+        </div>
+        <div id="output-placeholder">// RUN YOUR CODE TO SEE OUTPUT //</div>
+        <iframe id="output-frame" sandbox="allow-scripts allow-forms allow-popups"></iframe>
+    </div>
+</div>
+
+<!-- NEW FILE/FOLDER MODAL -->
+<div class="modal-overlay" id="new-item-modal">
+    <div class="modal-box">
+        <div class="modal-title">CREATE NEW</div>
+        <div class="type-toggle">
+            <button class="type-btn sel" id="type-file-btn" onclick="selectNewType('file')">📄 FILE</button>
+            <button class="type-btn" id="type-folder-btn" onclick="selectNewType('folder')">📁 FOLDER</button>
+        </div>
+        <div id="file-fields">
+            <div class="modal-lbl">PROJECT NAME</div>
+            <input class="modal-input" id="new-file-name" placeholder="my_project" maxlength="60" autocomplete="off" oninput="updatePreview()"/>
+            <div class="modal-lbl" style="margin-top:10px;">LANGUAGE</div>
+            <select class="modal-input" id="lang-select" onchange="updatePreview()" style="cursor:pointer;background:#050505;">
+                <option value="html">HTML (.html)</option>
+                <option value="js">JavaScript (.js)</option>
+                <option value="css">CSS (.css)</option>
+                <option value="py">Python (.py)</option>
+                <option value="json">JSON (.json)</option>
+                <option value="txt">Plain Text (.txt)</option>
+                <option value="md">Markdown (.md)</option>
+                <option value="ts">TypeScript (.ts)</option>
+                <option value="jsx">React JSX (.jsx)</option>
+                <option value="php">PHP (.php)</option>
+                <option value="sql">SQL (.sql)</option>
+                <option value="xml">XML (.xml)</option>
+                <option value="sh">Shell (.sh)</option>
+            </select>
+            <div id="file-preview">📄 my_project.html</div>
+        </div>
+        <div id="folder-fields" style="display:none;">
+            <div class="modal-lbl">FOLDER NAME</div>
+            <input class="modal-input" id="new-folder-name" placeholder="my_folder" maxlength="40" autocomplete="off"/>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn cancel" onclick="closeModal('new-item-modal')">CANCEL</button>
+            <button class="modal-btn" onclick="createItem()">▶ CREATE</button>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="delete-modal">
+    <div class="modal-box danger">
+        <div class="modal-title red">⚠ DELETE</div>
+        <div class="modal-body" id="delete-body"></div>
+        <div class="modal-actions">
+            <button class="modal-btn cancel" onclick="closeModal('delete-modal')">CANCEL</button>
+            <button class="modal-btn danger" onclick="confirmDelete()">✕ DELETE</button>
+        </div>
+    </div>
+</div>
+
+<!-- ALERT MODAL -->
+<div class="modal-overlay" id="alert-modal">
+    <div class="modal-box">
+        <div class="modal-title" id="alert-title">NOTICE</div>
+        <div class="modal-body" id="alert-body"></div>
+        <div class="modal-actions">
+            <button class="modal-btn" onclick="closeModal('alert-modal')">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden folder input -->
+<input type="file" id="up-files-input" multiple webkitdirectory mozdirectory style="display:none" onchange="doUpload(this)"/>
+
+<script>
+// ── STORAGE ────────────────────────────────────────────────────────────────────
+function i522wjZRL9(){var fs=JSON.parse(localStorage.getItem('scpFS'))||{};fs.workspaces=fs.workspaces||[];fs.activeWs=fs.activeWs||null;fs.items=fs.items||[];return fs;}
+function PGPI5g2q3U(fs){
+    // SECURITY: storage size check
+    try {
+        var str = JSON.stringify(fs);
+        if(str.length > 4000000){ showAlert('Storage full','Your workspace is too large. Delete some files to free up space.'); return; }
+        localStorage.setItem('scpFS', str);
+    } catch(e){ showAlert('Storage error','Could not save — storage may be full.'); }
+}
+
+var currentUser='', activeFileId=null, pendingDeleteId=null, newType='file', unsaved=false;
+
+// ── MODALS ─────────────────────────────────────────────────────────────────────
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function showAlert(t,m){document.getElementById('alert-title').innerText=t||'Notice';document.getElementById('alert-body').innerText=m||'';openModal('alert-modal');}
+
+// ── WORKSPACE ──────────────────────────────────────────────────────────────────
+function buildWsSel(){
+    var fs=i522wjZRL9(),sel=document.getElementById('workspace-select');
+    sel.innerHTML='<option value="">— SELECT —</option>';
+    fs.workspaces.forEach(function(w){
+        var o=document.createElement('option');o.value=w.id;o.innerText=w.name;
+        if(w.id===fs.activeWs)o.selected=true;
+        sel.appendChild(o);
+    });
+}
+
+function selectWorkspace(id){
+    var fs=i522wjZRL9();fs.activeWs=id||null;PGPI5g2q3U(fs);
+    var ok=!!id;
+    document.getElementById('new-btn').disabled=!ok;
+    document.getElementById('no-ws-msg').style.display=ok?'none':'flex';
+    document.getElementById('file-tree').style.display=ok?'block':'none';
+    buildWsSel();
+    renderTree();
+}
+
+function getActiveWs(){return i522wjZRL9().activeWs||null;}
+
+function deleteWorkspace(){
+    var fs=i522wjZRL9(),wsId=fs.activeWs;
+    if(!wsId){showAlert('No workspace','Select a workspace first.');return;}
+    var ws=fs.workspaces.find(function(w){return w.id===wsId;});if(!ws)return;
+    var count=countKids(wsId,fs.items)+fs.items.filter(function(i){return i.parentId===wsId;}).length;
+    var msg='Delete workspace "'+ws.name+'"'+(count?' and all '+count+' file(s)/folder(s) inside it':'')+'. This cannot be undone.';
+    if(!confirm(msg))return;
+    function collectKids(id){fs.items.filter(function(i){return i.parentId===id;}).forEach(function(c){deepDelete(c.id,fs);});}
+    collectKids(wsId);
+    fs.items=fs.items.filter(function(i){return i.parentId!==wsId;});
+    fs.workspaces=fs.workspaces.filter(function(w){return w.id!==wsId;});
+    fs.activeWs=fs.workspaces.length?fs.workspaces[fs.workspaces.length-1].id:null;
+    PGPI5g2q3U(fs);
+    activeFileId=null;
+    var ta=document.getElementById('code-editor');ta.value='';ta.disabled=true;
+    setFN('// NO FILE OPEN',false);cancelInlineRename();
+    ['save-btn','run-btn','clean-btn'].forEach(function(b){document.getElementById(b).style.display='none';});
+    stopCode();updateHighlight();
+    buildWsSel();
+    if(fs.activeWs)selectWorkspace(fs.activeWs);
+    else{document.getElementById('new-btn').disabled=true;document.getElementById('no-ws-msg').style.display='flex';document.getElementById('file-tree').style.display='none';}
+}
+
+// ── FILE TREE ──────────────────────────────────────────────────────────────────
+function renderTree(){
+    var fs=i522wjZRL9(),wsId=fs.activeWs;
+    if(!wsId)return;
+    var tree=document.getElementById('file-tree');tree.innerHTML='';
+    renderFolder(wsId,0,fs.items,tree);
+}
+
+function renderFolder(parentId,depth,items,container){
+    var children=items.filter(function(i){return i.parentId===parentId;});
+    var folders=children.filter(function(i){return i.type==='folder';});
+    var files=children.filter(function(i){return i.type==='file';});
+    folders.concat(files).forEach(function(item){
+        var row=document.createElement('div');
+        row.className='tree-item'+(activeFileId===item.id?' active':'');
+        var ind=document.createElement('span');ind.className='tree-indent';ind.style.width=(depth*14+8)+'px';row.appendChild(ind);
+        var ico=document.createElement('span');ico.className='tree-icon';
+        ico.innerText=item.type==='folder'?(item.open?'📂':'📁'):getFileIcon(item.name);
+        row.appendChild(ico);
+        var nm=document.createElement('span');nm.className='tree-name';nm.innerText=item.name;row.appendChild(nm);
+        var acts=document.createElement('div');acts.className='tree-acts';
+        var renB=document.createElement('button');renB.className='act-btn';renB.innerHTML='✏️';renB.title='Rename';
+        renB.onclick=function(e){e.stopPropagation();openTreeRename(item.id);};
+        var delB=document.createElement('button');delB.className='act-btn del';delB.innerHTML='🗑';delB.title='Delete';
+        delB.onclick=function(e){e.stopPropagation();openDeleteModal(item.id);};
+        acts.appendChild(renB);acts.appendChild(delB);row.appendChild(acts);
+        if(item.type==='folder'){
+            row.onclick=function(e){if(e.target.closest('.act-btn'))return;toggleFolder(item.id);};
+        }else{
+            row.onclick=function(e){if(e.target.closest('.act-btn'))return;openFile(item.id);};
+        }
+        container.appendChild(row);
+        if(item.type==='folder'&&item.open)renderFolder(item.id,depth+1,items,container);
+    });
+}
+
+function getFileIcon(name){
+    var ext=(name||'').split('.').pop().toLowerCase();
+    var icons={html:'🌐',js:'🟨',css:'🎨',py:'🐍',json:'📋',md:'📝',ts:'🔷',jsx:'⚛',php:'🐘',sql:'🗄',xml:'📄',sh:'⚙'};
+    return icons[ext]||'📄';
+}
+
+function toggleFolder(id){var fs=i522wjZRL9(),item=fs.items.find(function(i){return i.id===id;});if(item){item.open=!item.open;PGPI5g2q3U(fs);renderTree();}}
+
+// ── OPEN FILE ──────────────────────────────────────────────────────────────────
+function openFile(id){
+    var fs=i522wjZRL9(),file=fs.items.find(function(i){return i.id===id&&i.type==='file';});if(!file)return;
+    activeFileId=id;
+    var ta=document.getElementById('code-editor');ta.value=file.content||'';ta.disabled=false;
+    cancelInlineRename();
+    setFN(file.name,false);unsaved=false;updateCounts();
+    ['save-btn','run-btn','clean-btn'].forEach(function(b){document.getElementById(b).style.display='';});
+    renderTree();stopCode();updateHighlight();
+}
+
+function setFN(name,dirty){
+    var el=document.getElementById('editor-filename');
+    el.innerText=name||'// NO FILE OPEN';
+    el.className=dirty?'unsaved':'';
+}
+
+// ── INLINE RENAME ──────────────────────────────────────────────────────────────
+function startInlineRename(){
+    if(!activeFileId)return;
+    var fs=i522wjZRL9(),file=fs.items.find(function(i){return i.id===activeFileId;});if(!file)return;
+    var dot=file.name.lastIndexOf('.');
+    var base=dot>0?file.name.slice(0,dot):file.name;
+    var ext=dot>0?file.name.slice(dot+1):'txt';
+    document.getElementById('rename-base').value=base;
+    var sel=document.getElementById('rename-ext');
+    var found=false;
+    for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===ext){sel.selectedIndex=i;found=true;break;}}
+    if(!found){var o=document.createElement('option');o.value=ext;o.innerText=ext;sel.insertBefore(o,sel.firstChild);sel.selectedIndex=0;}
+    document.getElementById('editor-filename').classList.add('editing');
+    document.getElementById('rename-inline').classList.add('show');
+    document.getElementById('rename-base').focus();
+    document.getElementById('rename-base').select();
+}
+
+function applyInlineRename(){
+    if(!activeFileId)return;
+    var base=document.getElementById('rename-base').value.trim();
+    var ext=document.getElementById('rename-ext').value;
+    if(!base){showAlert('No name','Enter a filename.');return;}
+    var newName=base+'.'+ext;
+    var fs=i522wjZRL9(),item=fs.items.find(function(i){return i.id===activeFileId;});if(!item)return;
+    if(fs.items.some(function(i){return i.id!==activeFileId&&i.parentId===item.parentId&&i.name.toLowerCase()===newName.toLowerCase();})){
+        showAlert('Name taken','A file with that name already exists here.');return;
+    }
+    item.name=newName;item.editedAt=Date.now();PGPI5g2q3U(fs);
+    cancelInlineRename();setFN(newName,unsaved);renderTree();updateHighlight();
+}
+
+function cancelInlineRename(){
+    document.getElementById('editor-filename').classList.remove('editing');
+    document.getElementById('rename-inline').classList.remove('show');
+}
+
+function openTreeRename(id){
+    var fs=i522wjZRL9(),item=fs.items.find(function(i){return i.id===id;});if(!item)return;
+    if(item.type==='file'){openFile(id);setTimeout(startInlineRename,60);}
+    else{
+        var name=(prompt('Rename folder:',item.name)||'').trim();
+        if(!name||name===item.name)return;
+        if(fs.items.some(function(i){return i.id!==id&&i.parentId===item.parentId&&i.name.toLowerCase()===name.toLowerCase();})){showAlert('Name taken','A folder with that name already exists here.');return;}
+        item.name=name;item.editedAt=Date.now();PGPI5g2q3U(fs);renderTree();
+    }
+}
+
+// ── CREATE ─────────────────────────────────────────────────────────────────────
+function openNewItemModal(){
+    if(!getActiveWs()){showAlert('No workspace','Select or upload a workspace first.');return;}
+    document.getElementById('new-file-name').value='';document.getElementById('new-folder-name').value='';
+    selectNewType('file');openModal('new-item-modal');
+    setTimeout(function(){document.getElementById('new-file-name').focus();},80);
+}
+
+function selectNewType(t){
+    newType=t;
+    document.getElementById('type-file-btn').className='type-btn'+(t==='file'?' sel':'');
+    document.getElementById('type-folder-btn').className='type-btn'+(t==='folder'?' sel':'');
+    document.getElementById('file-fields').style.display=t==='file'?'block':'none';
+    document.getElementById('folder-fields').style.display=t==='folder'?'block':'none';
+    updatePreview();
+}
+
+function updatePreview(){
+    var name=document.getElementById('new-file-name').value.trim()||'my_project';
+    var ext=document.getElementById('lang-select').value;
+    document.getElementById('file-preview').innerText='📄 '+name+'.'+ext;
+}
+
+function createItem(){
+    var wsId=getActiveWs();if(!wsId){showAlert('No workspace','Select a workspace first.');return;}
+    var fs=i522wjZRL9(),now=Date.now();
+    if(newType==='file'){
+        var rawName=document.getElementById('new-file-name').value.trim();
+        var ext=document.getElementById('lang-select').value;
+        if(!rawName){showAlert('No name','Enter a project name.');return;}
+        var name=rawName+'.'+ext;
+        if(fs.items.some(function(i){return i.parentId===wsId&&i.name.toLowerCase()===name.toLowerCase();})){showAlert('Name taken','A file with that name already exists here.');return;}
+        var id='f_'+now;
+        fs.items.push({id:id,type:'file',name:name,parentId:wsId,content:'',createdAt:now,editedAt:now,open:false});
+        PGPI5g2q3U(fs);closeModal('new-item-modal');renderTree();openFile(id);
+    }else{
+        var fname=document.getElementById('new-folder-name').value.trim();
+        if(!fname){showAlert('No name','Enter a folder name.');return;}
+        if(fs.items.some(function(i){return i.parentId===wsId&&i.name.toLowerCase()===fname.toLowerCase();})){showAlert('Name taken','A folder with that name already exists here.');return;}
+        var fid='dir_'+now;
+        fs.items.push({id:fid,type:'folder',name:fname,parentId:wsId,content:'',createdAt:now,editedAt:now,open:true});
+        PGPI5g2q3U(fs);closeModal('new-item-modal');renderTree();
+    }
+}
+
+// ── DELETE ─────────────────────────────────────────────────────────────────────
+function openDeleteModal(id){
+    var fs=i522wjZRL9(),item=fs.items.find(function(i){return i.id===id;});if(!item)return;
+    pendingDeleteId=id;
+    var cc=item.type==='folder'?countKids(id,fs.items):0;
+    var msg=item.type==='folder'
+        ?'Delete folder "'+item.name+'"'+(cc?' and all '+cc+' item(s) inside it':'')+'. Cannot be undone.'
+        :'Permanently delete "'+item.name+'" and all its code. Cannot be undone.';
+    document.getElementById('delete-body').innerText=msg;openModal('delete-modal');
+}
+
+function countKids(id,items){var n=0;items.filter(function(i){return i.parentId===id;}).forEach(function(c){n++;n+=countKids(c.id,items);});return n;}
+
+function deepDelete(id,fs){fs.items.filter(function(i){return i.parentId===id;}).forEach(function(c){deepDelete(c.id,fs);});fs.items=fs.items.filter(function(i){return i.id!==id;});}
+
+function confirmDelete(){
+    closeModal('delete-modal');if(!pendingDeleteId)return;
+    var fs=i522wjZRL9();deepDelete(pendingDeleteId,fs);PGPI5g2q3U(fs);
+    if(activeFileId===pendingDeleteId){
+        activeFileId=null;var ta=document.getElementById('code-editor');ta.value='';ta.disabled=true;
+        setFN('// NO FILE OPEN',false);cancelInlineRename();
+        ['save-btn','run-btn','clean-btn'].forEach(function(b){document.getElementById(b).style.display='none';});
+        stopCode();updateHighlight();
+    }
+    pendingDeleteId=null;renderTree();
+}
+
+// ── SAVE ───────────────────────────────────────────────────────────────────────
+function jqLSmNqE40(){
+    if(!activeFileId)return;var fs=i522wjZRL9(),file=fs.items.find(function(i){return i.id===activeFileId;});if(!file)return;
+    var clean=stripBack(document.getElementById('code-editor').value);
+    file.content=clean;file.editedAt=Date.now();PGPI5g2q3U(fs);
+    document.getElementById('code-editor').value=clean;unsaved=false;setFN(file.name,false);
+    var ss=document.getElementById('save-status');ss.innerText='✓ Saved';setTimeout(function(){ss.innerText='';},2000);
+    updateCounts();updateHighlight();
+}
+
+// ── EDITOR EVENTS ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',function(){
+    var ta=document.getElementById('code-editor');
+    var hl=document.getElementById('hl-layer');
+    ta.addEventListener('input',function(){
+        updateCounts();updateHighlight();
+        if(activeFileId){unsaved=true;var file=i522wjZRL9().items.find(function(i){return i.id===activeFileId;});if(file)setFN(file.name,true);}
+    });
+    ta.addEventListener('scroll',function(){if(hl)hl.scrollTop=ta.scrollTop;});
+    ta.addEventListener('keydown',function(e){
+        if(e.key==='Tab'){e.preventDefault();var s=ta.selectionStart,end=ta.selectionEnd;ta.value=ta.value.substring(0,s)+'    '+ta.value.substring(end);ta.selectionStart=ta.selectionEnd=s+4;updateHighlight();}
+        if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();jqLSmNqE40();}
+    });
+});
+
+function updateCounts(){var c=document.getElementById('code-editor').value;document.getElementById('char-count').innerText=c.length+' chars';document.getElementById('line-count').innerText=c.split('\n').length+' lines';}
+
+// ── RUN ────────────────────────────────────────────────────────────────────────
+var BACK_CODE='<style>\n#__scp_back{position:fixed;bottom:14px;right:14px;z-index:99999;padding:9px 16px;background:#3fbf3f;color:#000;border:none;font-weight:bold;font-size:12px;letter-spacing:2px;cursor:move;box-shadow:0 0 10px #3fbf3f;font-family:Arial,sans-serif;user-select:none;touch-action:none;}\n#__scp_back:hover{background:#5fff5f;}\n</style>\n<button id="__scp_back">&#x2190; BACK TO SITE</button>\n<script>\n(function(){\nvar btn=document.getElementById("__scp_back");\nvar dragging=false,ox=0,oy=0,startX=0,startY=0,moved=false;\nbtn.addEventListener("mousedown",function(e){\n  if(e.button!==0)return;\n  dragging=true;moved=false;\n  ox=btn.offsetLeft;oy=btn.offsetTop;\n  var rect=btn.getBoundingClientRect();\n  startX=e.clientX;startY=e.clientY;\n  btn.style.right="auto";btn.style.bottom="auto";\n  btn.style.left=ox+"px";btn.style.top=oy+"px";\n  e.preventDefault();\n});\ndocument.addEventListener("mousemove",function(e){\n  if(!dragging)return;\n  var dx=e.clientX-startX,dy=e.clientY-startY;\n  if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;\n  btn.style.left=(ox+dx)+"px";\n  btn.style.top=(oy+dy)+"px";\n});\ndocument.addEventListener("mouseup",function(e){\n  if(!dragging)return;\n  dragging=false;\n  if(!moved){\n    try{window.parent.stopCode();}catch(err){window.history.back();}\n  }\n});\n})();\n<\/script>';
+
+function fNZcui8kBR(){
+    var raw=document.getElementById('code-editor').value.trim();
+    if(!raw){showAlert('Empty editor','Write some code first.');return;}
+
+    // SECURITY: warn about dangerous patterns (all patterns now checked)
+    var dangerChecks = [
+        { re: /while\s*\(\s*true\s*\)/i,      msg: '\u26a0 Infinite loop (while(true)) \u2014 may freeze your tab.' },
+        { re: /for\s*\(\s*;\s*;\s*\)/i,        msg: '\u26a0 Infinite loop (for(;;)) \u2014 may freeze your tab.' },
+        { re: /localStorage\.clear\s*\(/,       msg: '\u26a0 localStorage.clear() will wipe ALL site data.' },
+        { re: /document\.cookie/,              msg: '\u26a0 Code accesses cookies.' },
+        { re: /window\.location\s*=/,          msg: '\u26a0 Code attempts to redirect the page.' },
+        { re: /fetch\s*\(/,                    msg: '\u26a0 Code makes external network requests (fetch).' },
+        { re: /XMLHttpRequest/,                msg: '\u26a0 Code makes external network requests (XHR).' },
+        { re: /window\.parent/,               msg: '\u26a0 Code attempts to access the parent frame.' },
+    ];
+    var warnings = [];
+    dangerChecks.forEach(function(c){ if(c.re.test(raw)) warnings.push(c.msg); });
+    if (warnings.length > 0) {
+        if (!confirm('SECURITY WARNING:\n\n' + warnings.join('\n') + '\n\nRun anyway?')) return;
+    }
+    var clean=stripBack(raw);
+
+    // Wrap JS files with a 5-second execution timeout guard
+    var lang = getFileLang(activeFileId ? (i522wjZRL9().items.find(i=>i.id===activeFileId)||{name:''}).name : '');
+    var safeClean = clean;
+    if(lang === 'js'){
+        safeClean = '<script>\n(function(){\ntry{\n' + clean + '\n}catch(e){console.error("Runtime error:",e.message);}\n})();\n<\/script>';
+    }
+
+    document.getElementById('code-editor').value=clean+'\n\n// DELETE BELOW HERE\n'+BACK_CODE+'\n// DELETE ABOVE HERE';
+    updateCounts();updateHighlight();
+    document.getElementById('inject-notice').style.display='block';
+    var frame=document.getElementById('output-frame');frame.style.display='block';
+    document.getElementById('output-placeholder').style.display='none';
+    var doc=frame.contentDocument||frame.contentWindow.document;doc.open();doc.write(safeClean+'\n'+BACK_CODE);doc.close();
+    document.getElementById('stop-btn').style.display='';document.getElementById('fullscreen-btn').style.display='';
+    setTimeout(function(){
+        document.getElementById('code-editor').value=clean;updateCounts();updateHighlight();
+        document.getElementById('inject-notice').style.display='none';
+        if(activeFileId){var file=i522wjZRL9().items.find(function(i){return i.id===activeFileId;});if(file)setFN(file.name,unsaved);}
+    },1800);
+}
+
+function stopCode(){
+    var frame=document.getElementById('output-frame');
+    try{if(frame.contentDocument){frame.contentDocument.open();frame.contentDocument.write('');frame.contentDocument.close();}}catch(e){}
+    frame.style.display='none';document.getElementById('output-placeholder').style.display='flex';
+    document.getElementById('stop-btn').style.display='none';document.getElementById('fullscreen-btn').style.display='none';
+    document.getElementById('inject-notice').style.display='none';
+}
+window.stopCode=stopCode;
+
+function openFullscreen(){var f=document.getElementById('output-frame');if(f.requestFullscreen)f.requestFullscreen();else if(f.webkitRequestFullscreen)f.webkitRequestFullscreen();}
+function cleanupBackCode(){var ta=document.getElementById('code-editor');ta.value=stripBack(ta.value);updateCounts();updateHighlight();}
+function stripBack(code){var idx=code.indexOf('// DELETE BELOW HERE');if(idx!==-1)return code.substring(0,idx).trimEnd();return code.replace(/<style>\s*#__scp_back[\s\S]*?<\/style>\s*<button id="__scp_back"[\s\S]*?<\/button>/g,'').trimEnd();}
+
+// ── UPLOAD ─────────────────────────────────────────────────────────────────────
+function doUpload(input) {
+    if (!input || !input.files || !input.files.length) return;
+    var fileList = Array.from(input.files);
+    var now = Date.now();
+    var fs = i522wjZRL9();
+
+    // Extract root folder name from first file's path
+    var rootFolderName = 'Uploaded Files'; // fallback
+    if (fileList.length > 0 && fileList[0].webkitRelativePath) {
+        rootFolderName = fileList[0].webkitRelativePath.split('/')[0] || 'Uploaded Files';
+    }
+
+    // Use existing workspace or make one with the folder name
+    var wsId = fs.activeWs;
+    if (!wsId) {
+        wsId = 'ws_' + now;
+        fs.workspaces.push({ id: wsId, name: rootFolderName });
+        fs.activeWs = wsId;
+    }
+
+    var pending = fileList.length;
+    var firstFileId = null;
+
+    function finish() {
+        PGPI5g2q3U(fs);
+        // Force workspace select to show this workspace
+        var sel = document.getElementById('workspace-select');
+        // rebuild options
+        sel.innerHTML = '<option value="">— SELECT —</option>';
+        fs.workspaces.forEach(function(w) {
+            var o = document.createElement('option');
+            o.value = w.id; o.innerText = w.name;
+            if (w.id === wsId) o.selected = true;
+            sel.appendChild(o);
+        });
+        // Show file tree, hide placeholder
+        document.getElementById('new-btn').disabled = false;
+        document.getElementById('no-ws-msg').style.display = 'none';
+        document.getElementById('file-tree').style.display = 'block';
+        // Render tree directly
+        var tree = document.getElementById('file-tree');
+        tree.innerHTML = '';
+        renderFolder(wsId, 0, fs.items, tree);
+        // Open first file
+        if (firstFileId) openFile(firstFileId);
+        input.value = '';
+    }
+
+    fileList.forEach(function(file, idx) {
+        var r = new FileReader();
+        r.onload = function(e) {
+            var fid = 'upf_' + now + '_' + idx;
+            var fn = file.name;
+            // overwrite if same name exists
+            var ex = fs.items.find(function(it) { return it.type==='file' && it.parentId===wsId && it.name===fn; });
+            if (ex) { ex.content = e.target.result; ex.editedAt = now; if (!firstFileId) firstFileId = ex.id; }
+            else { fs.items.push({ id:fid, type:'file', name:fn, parentId:wsId, content:e.target.result, createdAt:now, editedAt:now, open:false }); if (!firstFileId) firstFileId = fid; }
+            pending--;
+            if (pending === 0) finish();
+        };
+        r.onerror = function() {
+            pending--;
+            if (pending === 0) finish();
+        };
+        r.readAsText(file);
+    });
+}
+
+// ── SYNTAX HIGHLIGHTING ────────────────────────────────────────────────────────
+var HL = {
+    html: {
+        bg:'#020503',
+        rules:[
+            {re:/(&lt;!--[\s\S]*?--&gt;)/g,               col:'#6272a4'},
+            {re:/(&lt;\/?[a-zA-Z][a-zA-Z0-9:-]*)/g,       col:'#ff79c6'},
+            {re:/(\/&gt;|&gt;)/g,                         col:'#ff79c6'},
+            {re:/\b([a-zA-Z-]+=)/g,                       col:'#50fa7b'},
+            {re:/("[^"]*"|'[^']*')/g,                     col:'#f1fa8c'},
+        ]
+    },
+    js: {
+        bg:'#020304',
+        rules:[
+            {re:/(\/\/[^\n]*)/g,                                          col:'#6272a4'},
+            {re:/(\/\*[\s\S]*?\*\/)/g,                                    col:'#6272a4'},
+            {re:/("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*'|`[^`\\]*(?:\\.[^`\\]*)*`)/g, col:'#f1fa8c'},
+            {re:/\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|new|this|class|extends|import|export|default|async|await|try|catch|finally|throw|delete|void|in|of|typeof|instanceof)\b/g, col:'#ff79c6'},
+            {re:/\b(true|false|null|undefined|NaN|Infinity)\b/g,          col:'#bd93f9'},
+            {re:/\b([A-Z][a-zA-Z0-9_]*)\b/g,                             col:'#8be9fd'},
+            {re:/\b(\d+\.?\d*)\b/g,                                       col:'#bd93f9'},
+        ]
+    },
+    ts: {bg:'#020304',rules:null},
+    jsx:{bg:'#020304',rules:null},
+    css:{
+        bg:'#030204',
+        rules:[
+            {re:/(\/\*[\s\S]*?\*\/)/g,                    col:'#6272a4'},
+            {re:/("[^"]*"|'[^']*')/g,                     col:'#f1fa8c'},
+            {re:/@[a-zA-Z-]+/g,                           col:'#ff79c6'},
+            {re:/:[a-zA-Z-]+(?=\s*[{,])/g,               col:'#ff79c6'},
+            {re:/\b([a-zA-Z-]+)(?=\s*:)/g,               col:'#50fa7b'},
+            {re:/(#[0-9a-fA-F]{3,8})\b/g,                col:'#bd93f9'},
+            {re:/\b(\d+\.?\d*(px|em|rem|%|vh|vw|pt|s|ms|deg)?)\b/g, col:'#bd93f9'},
+        ]
+    },
+    py: {
+        bg:'#030402',
+        rules:[
+            {re:/(#[^\n]*)/g,                             col:'#6272a4'},
+            {re:/("""[\s\S]*?"""|'''[\s\S]*?''')/g,      col:'#f1fa8c'},
+            {re:/("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')/g, col:'#f1fa8c'},
+            {re:/\b(def|class|import|from|return|if|elif|else|for|while|in|not|and|or|is|pass|break|continue|try|except|finally|raise|with|as|lambda|yield|global|nonlocal|del|assert)\b/g, col:'#ff79c6'},
+            {re:/\b(True|False|None)\b/g,                col:'#bd93f9'},
+            {re:/\b([A-Z][a-zA-Z0-9_]*)\b/g,            col:'#8be9fd'},
+            {re:/\b(\d+\.?\d*)\b/g,                      col:'#bd93f9'},
+        ]
+    },
+    json:{
+        bg:'#020404',
+        rules:[
+            {re:/("(?:[^"\\]|\\.)*")(\s*:)/g,            col:'#50fa7b',group:1},
+            {re:/:\s*("(?:[^"\\]|\\.)*")/g,              col:'#f1fa8c',group:1},
+            {re:/\b(true|false|null)\b/g,                col:'#bd93f9'},
+            {re:/\b(-?\d+\.?\d*)\b/g,                    col:'#bd93f9'},
+        ]
+    },
+    sql:{
+        bg:'#040402',
+        rules:[
+            {re:/(--[^\n]*)/g,                           col:'#6272a4'},
+            {re:/('[^']*')/g,                            col:'#f1fa8c'},
+            {re:/\b(SELECT|FROM|WHERE|INSERT|INTO|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|JOIN|LEFT|RIGHT|INNER|ON|AS|AND|OR|NOT|IN|IS|NULL|ORDER|BY|GROUP|HAVING|LIMIT|VALUES|PRIMARY|KEY|UNIQUE|DEFAULT|CASCADE)\b/gi, col:'#ff79c6'},
+            {re:/\b(\d+)\b/g,                            col:'#bd93f9'},
+        ]
+    },
+    sh:{
+        bg:'#040302',
+        rules:[
+            {re:/(#[^\n]*)/g,                            col:'#6272a4'},
+            {re:/("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')/g, col:'#f1fa8c'},
+            {re:/\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|exit|echo|export|cd|grep|awk|sed|cat|rm|mv|cp|mkdir|chmod|sudo)\b/g, col:'#ff79c6'},
+            {re:/(\$[a-zA-Z_][a-zA-Z0-9_]*|\$\{[^}]+\})/g, col:'#bd93f9'},
+        ]
+    }
+};
+
+function getFileLang(){
+    if(!activeFileId)return null;
+    var fs=i522wjZRL9(),file=fs.items.find(function(i){return i.id===activeFileId;});
+    if(!file)return null;
+    var dot=file.name.lastIndexOf('.');
+    var ext=dot>=0?file.name.slice(dot+1).toLowerCase():null;
+    // Map aliases to canonical lang
+    var aliases={ts:'js',tsx:'js',jsx:'js',mjs:'js',cjs:'js',scss:'css',sass:'css',bash:'sh',zsh:'sh',htm:'html',xml:'html',php:'js'};
+    return aliases[ext]||ext;
+}
+
+function hlEscape(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function applyHL(code,lang){
+    var theme=HL[lang];
+    if(!theme||!theme.rules)return null;
+    var escaped=hlEscape(code);
+    var tokens=[];
+    function protect(s,col){var i=tokens.length;tokens.push('<span style="color:'+col+'">'+s+'</span>');return '\x00T'+i+'\x00';}
+    theme.rules.forEach(function(rule){
+        escaped=escaped.replace(rule.re,function(){
+            var match=arguments[0];
+            if(rule.group){
+                var target=arguments[rule.group];if(!target)return match;
+                return match.replace(target,protect(target,rule.col));
+            }
+            return protect(match,rule.col);
+        });
+    });
+    return escaped.replace(/\x00T(\d+)\x00/g,function(_,i){return tokens[parseInt(i)];});
+}
+
+function updateHighlight(){
+    var hl=document.getElementById('hl-layer');
+    var ta=document.getElementById('code-editor');
+    var wrap=document.getElementById('editor-wrap');
+    if(!hl||!ta)return;
+    var lang=getFileLang();
+    var theme=lang?HL[lang]:null;
+    var bg=(theme&&theme.bg)||'#030503';
+    wrap.style.background=bg;
+    if(!theme||!theme.rules){
+        hl.innerHTML='';
+        ta.classList.add('no-hl');
+        return;
+    }
+    ta.classList.remove('no-hl');
+    var result=applyHL(ta.value,lang);
+    if(result!==null){hl.innerHTML=result;hl.scrollTop=ta.scrollTop;}
+    else{hl.innerHTML='';ta.classList.add('no-hl');}
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+window.onload=function(){
+    var username=localStorage.getItem('loggedInUser');if(!username){window.location.href='Index.html';return;}
+    currentUser=username;
+    var accts=JSON.parse(localStorage.getItem('approvedAccounts'))||[];
+    var user=accts.find(function(a){return a.username&&a.username.toLowerCase()===username.toLowerCase();});
+    if(!user||!Array.isArray(user.access)||!user.access.includes('Console')){
+        document.getElementById('main').innerHTML='<div class="access-denied">// ACCESS DENIED //</div>';return;
+    }
+    buildWsSel();var fs=i522wjZRL9();if(fs.activeWs)selectWorkspace(fs.activeWs);
+    updateCounts();
+};
+</script>
+
+<script>
+/* scpTheme-postload */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(!t.bg && !t.accent) return;
+    function applyEl(id){ var el=document.getElementById(id); if(el&&t.bg) el.style.backgroundColor=t.bg; }
+    function run(){ applyEl('header'); applyEl('navbar'); if(t.bg) document.body.style.backgroundColor=t.bg; }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
+    else run();
+})();
+</script>
+</body>
+</html>

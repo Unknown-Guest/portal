@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles.css">
+<style>/* MAIN LAYOUT - identical to messages.html */
+    #main { display: flex; flex: 1; overflow: hidden; background: var(--scp-bg, #000);
+        background: var(--scp-bg, #000);}
+
+    #sidebar { width: 200px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #sidebar-label { padding: 14px 16px 10px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray-text); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); }
+    .sidebar-tab { padding: 13px 16px; background: transparent; border: none; border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); color: var(--scp-green); font-size: 11px; letter-spacing: 1.5px; cursor: pointer; text-align: left; transition: 0.15s; opacity: 0.55; width: 100%; }
+    .sidebar-tab:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); opacity: 1; }
+    .sidebar-tab.active { opacity: 1; background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); border-left: 3px solid var(--scp-green); }
+
+    #subject-panel { width: 240px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #subject-panel-label { padding: 10px 14px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray-text); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); flex-shrink: 0; }
+    #subject-list { flex: 1; overflow-y: auto; }
+
+    .subject-item { padding: 13px 14px; border-bottom: 1px solid #0d0d0d; cursor: pointer; transition: 0.1s; }
+    .subject-item:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .subject-item.active { background: color-mix(in srgb, var(--scp-green) 12%, var(--scp-bg, #000)); border-left: 3px solid var(--scp-green); }
+    .subject-name { font-size: 12px; letter-spacing: 1px; color: var(--scp-green); margin-bottom: 3px; }
+    .subject-tag { font-size: 10px; color: var(--scp-gray-text); letter-spacing: 0.5px; }
+    .empty-msg { padding: 20px; font-size: 11px; letter-spacing: 1px; color: var(--scp-gray-text); text-align: center; line-height: 1.8; }
+
+    /* CONTENT PANEL */
+    #content-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--scp-bg, #000); }
+    #content-placeholder { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 12px; letter-spacing: 1.5px; color: var(--scp-green-soft); opacity: 0.5; background: var(--scp-bg, #000); }
+
+    #content-header { padding: 14px 20px; border-bottom: 1px solid var(--scp-green); background: var(--scp-bg, #000); flex-shrink: 0; }
+    #content-header-name { font-size: 14px; letter-spacing: 3px; text-shadow: 0 0 4px var(--scp-green); }
+    #content-header-sub { font-size: 10px; color: var(--scp-gray-text); letter-spacing: 1.5px; margin-top: 4px; }
+
+    #content-body { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; background: var(--scp-bg, #000); }
+
+    .info-block { border: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); background: var(--scp-bg, #000); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .info-block-title { font-size: 10px; letter-spacing: 2.5px; color: var(--scp-green-soft); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); padding-bottom: 8px; opacity: 0.8; }
+    .info-block-body { font-size: 13px; color: var(--scp-green-soft); line-height: 1.8; letter-spacing: 0.5px; }
+    .info-badge { display: inline-block; padding: 3px 10px; border: 1px solid var(--scp-green); font-size: 10px; letter-spacing: 1px; border-radius: 10px; margin: 3px; color: var(--scp-green); }
+    .info-badge.gold { border-color: #ffcc00; color: #ffcc00; }
+    .info-badge.gray { border-color: #444; color: #444; }
+
+    .coming-soon { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; opacity: 0.3; }
+    .coming-soon-icon { font-size: 40px; }
+    .coming-soon-text { font-size: 11px; letter-spacing: 3px; }
+    .locked-tab { opacity: 0.3 !important; cursor: not-allowed !important; }
+    .locked-tab:hover { background: transparent !important; opacity: 0.3 !important; }
+    .archived-tab { opacity: 0.6; border-left: 3px solid #2a4a2a !important; }
+    .archived-tab:hover { opacity: 0.85 !important; background: #060d06 !important; }
+    .archived-tab.active { opacity: 1 !important; }
+    .current-tab { border-left: 3px solid var(--scp-green) !important; opacity: 1 !important; }
+    .current-tab:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)) !important; }
+</style>
+<script>
+/* scpTheme-apply — apply saved theme before paint */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){
+        document.documentElement.style.setProperty('--scp-bg',t.bg);
+        document.documentElement.style.backgroundColor=t.bg;
+    }
+    if(t.accent){
+        document.documentElement.style.setProperty('--scp-green',t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft',t.accent);
+        var hex=t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text',lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+(function(){
+    // Valid access values only
+    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
+    var VALID_ROLES = ['student','teacher'];
+
+    function _guardRole() {
+        try {
+            var user = localStorage.getItem('loggedInUser');
+            if (!user) return;
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+            if (!me) return;
+
+            var changed = false;
+
+            // Strip any invalid role
+            if (!VALID_ROLES.includes(me.role)) {
+                // Illegal role — strip admin-like access
+                me.role = 'student';
+                changed = true;
+            }
+
+            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
+            if (me.access && !me.username.toLowerCase().includes('restricted')) {
+                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
+                if (filteredAccess.length !== me.access.length) {
+                    me.access = filteredAccess;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                // Update integrity
+                try {
+                    var d = localStorage.getItem('approvedAccounts') || '[]';
+                    var h = 5381;
+                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                    localStorage.setItem('_ic', (h >>> 0).toString(36));
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _guardRole);
+    } else {
+        _guardRole();
+    }
+})();
+</script>
+
+<script>
+// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
+(function(){
+    var user = localStorage.getItem('loggedInUser');
+    if (!user) return;
+    try {
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (me && me.suspended) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            // Recheck integrity immediately when this key changes from outside
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">TUTORS</div>
+    <div id="header-sub">// PROTECTED WEBSITE //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn active">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* lookup-nav-show-injected */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isT=me&&me.role==='teacher';
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isT||isA||isR){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+
+<script>
+/* admin-nav-show */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+</div>
+
+<div id="main">
+
+    <!-- SIDEBAR: Year group tabs -->
+    <div id="sidebar">
+        <div id="sidebar-label">YEAR GROUP</div>
+        <button class="sidebar-tab active" onclick="switchTab('y7')">📗 YEAR 7</button>
+        <button class="sidebar-tab" onclick="switchTab('y8')">📗 YEAR 8</button>
+        <button class="sidebar-tab" onclick="switchTab('y9')">📘 YEAR 9</button>
+        <button class="sidebar-tab" onclick="switchTab('y10')">📘 YEAR 10</button>
+        <button class="sidebar-tab" onclick="switchTab('y11')">📙 YEAR 11</button>
+        <button class="sidebar-tab" onclick="switchTab('y12')">📙 YEAR 12</button>
+        <button class="sidebar-tab" onclick="switchTab('certs')">📜 CERTIFICATES</button>
+    </div>
+
+    <!-- SUBJECT LIST -->
+    <div id="subject-panel">
+        <div id="subject-panel-label">SUBJECTS</div>
+        <div id="subject-list"></div>
+    </div>
+
+    <!-- CONTENT PANEL -->
+    <div id="content-panel">
+        <div id="content-placeholder">// SELECT A SUBJECT //</div>
+    </div>
+
+</div>
+
+<script>
+const SUBJECTS = {
+    y7: {
+        core: [
+            { name: "English", tag: "4 periods/week", description: "Reading, writing, speaking and listening. Builds critical thinking and communication skills.", topics: ["Reading & Comprehension","Creative Writing","Persuasive Texts","Grammar & Language","Literature Analysis"] },
+            { name: "Mathematics", tag: "4 periods/week", description: "Foundational maths including number, algebra, measurement, geometry and statistics.", topics: ["Number & Algebra","Measurement & Geometry","Statistics & Probability","Problem Solving"] },
+            { name: "Science", tag: "4 periods/week", description: "Biology, chemistry, physics and earth sciences with hands-on scientific inquiry.", topics: ["Biology","Chemistry","Physics","Earth & Space Science","Scientific Inquiry"] },
+            { name: "Humanities", tag: "3 periods/week", description: "History, geography, economics and civics — understanding the world and our place in it.", topics: ["History","Geography","Economics & Business","Civics & Citizenship"] },
+            { name: "RE", tag: "3 periods/week", description: "Religious Education exploring faith traditions, ethics and the Catholic tradition.", topics: ["World Religions","Ethics & Morality","Catholic Tradition","Social Justice"] },
+        ],
+        electives: [
+            { name: "HPE", tag: "Semester Rotation", description: "Health and Physical Education. All Year 7 students complete 1 semester of HPE as a compulsory rotation.", topics: ["Team Sports","Individual Fitness","Health & Wellbeing","Movement Skills"] },
+            { name: "ITD", tag: "Semester Rotation", description: "Industrial Technology & Design. All Year 7 students complete 1 semester — design thinking and hands-on construction.", topics: ["Design Process","Materials & Tools","Construction","Safety in the Workshop"] },
+            { name: "Art", tag: "Term Rotation", description: "Visual Art as a compulsory term rotation. Students explore a range of creative media.", topics: ["Drawing & Painting","Sculpture","Art History","Mixed Media"] },
+            { name: "Music", tag: "Term Rotation", description: "Music as a compulsory term rotation covering theory and basic performance skills.", topics: ["Music Theory","Rhythm & Melody","Instrument Basics","Listening & Appreciation"] },
+            { name: "Agriculture", tag: "Term Rotation", description: "Agricultural practices, plant science and animal husbandry as a term rotation.", topics: ["Plant Science","Animal Husbandry","Sustainable Farming","Food Production"] },
+            { name: "Digital Technology", tag: "Term Rotation", description: "Introduction to coding, digital systems and online problem solving.", topics: ["Coding & Programming","Digital Systems","Cybersafety","Data & Information"] },
+        ]
+    },
+    y8: {
+        core: [
+            { name: "English", tag: "4 periods/week", description: "Continued development in reading, writing and communication with more complex texts.", topics: ["Reading & Comprehension","Creative Writing","Persuasive Texts","Grammar & Language","Literature Analysis"] },
+            { name: "Mathematics", tag: "4 periods/week", description: "Building on Year 7 maths with more complex algebra, geometry and data skills.", topics: ["Number & Algebra","Measurement & Geometry","Statistics & Probability","Financial Maths"] },
+            { name: "Science", tag: "4 periods/week", description: "Deeper exploration of biology, chemistry, physics and earth science strands.", topics: ["Biology","Chemistry","Physics","Earth & Space Science","Scientific Inquiry"] },
+            { name: "Humanities", tag: "3 periods/week", description: "Expanding into more detailed historical and geographical inquiry and civic understanding.", topics: ["History","Geography","Economics & Business","Civics & Citizenship"] },
+            { name: "RE", tag: "3 periods/week", description: "Religious Education with a focus on ethics, justice and faith in action.", topics: ["World Religions","Ethics & Morality","Catholic Tradition","Social Justice"] },
+        ],
+        electives: [
+            { name: "HPE", tag: "Semester Rotation", description: "All Year 8 students complete 1 semester of HPE as a compulsory rotation.", topics: ["Team Sports","Fitness","Health Education","Wellbeing"] },
+            { name: "Art", tag: "Term Rotation", description: "Visual Art as a compulsory term rotation in Year 8.", topics: ["Drawing & Painting","Sculpture","Art History","Mixed Media"] },
+            { name: "Music", tag: "Term Rotation", description: "Music as a compulsory term rotation in Year 8.", topics: ["Music Theory","Rhythm & Melody","Instrument Basics","Listening & Appreciation"] },
+            { name: "Agriculture", tag: "Semester Elective", description: "Choose agriculture for a semester — covers plant and animal science, sustainable farming.", topics: ["Plant Science","Animal Husbandry","Sustainable Farming","Food Production"] },
+            { name: "Athletic Development in Sport", tag: "Semester Elective", description: "Sport-specific training and physical conditioning for students passionate about sport.", topics: ["Strength & Conditioning","Sport Tactics","Nutrition","Injury Prevention"] },
+            { name: "Concert Band", tag: "Semester Elective", description: "Ensemble performance in a concert band setting. Some instrument experience recommended.", topics: ["Ensemble Performance","Music Reading","Rehearsal Techniques","Performance"] },
+            { name: "Contemporary Ensemble", tag: "Semester Elective", description: "Modern music ensemble — pop, rock and jazz styles with group performance.", topics: ["Contemporary Styles","Band Dynamics","Improvisation","Original Composition"] },
+            { name: "Digital Technology", tag: "Semester Elective", description: "Coding, digital systems and problem solving using technology.", topics: ["Coding & Programming","Digital Systems","Cybersafety","Data & Information"] },
+            { name: "Industrial Technology & Design", tag: "Semester Elective", description: "Hands-on design and construction projects using timber, metal and plastics.", topics: ["Design Brief","Materials Science","Manufacturing","Product Evaluation"] },
+            { name: "Visual Art", tag: "Semester Elective", description: "Deeper exploration of art mediums and art history in an elective context.", topics: ["Drawing","Painting","Printmaking","Art Criticism"] },
+        ]
+    },
+    y9: {
+        core: [
+            { name: "English", tag: "4 periods/week", description: "Advanced reading, writing and analytical skills across a range of text types.", topics: ["Reading & Comprehension","Creative Writing","Persuasive Texts","Grammar & Language","Literature Analysis"] },
+            { name: "Mathematics", tag: "4 periods/week", description: "Algebra, geometry, trigonometry, statistics and financial mathematics at a Year 9 level.", topics: ["Number & Algebra","Trigonometry","Measurement & Geometry","Statistics & Probability"] },
+            { name: "Science", tag: "4 periods/week", description: "Integrated science with a focus on scientific investigation and applying concepts to real-world contexts.", topics: ["Biology","Chemistry","Physics","Earth & Space Science","Scientific Inquiry"] },
+            { name: "Humanities", tag: "3 periods/week", description: "Critical inquiry into history, geography, economics and civics at a global scale.", topics: ["History","Geography","Economics & Business","Civics & Citizenship"] },
+            { name: "RE", tag: "3 periods/week", description: "Religious Education exploring deeper ethical questions and interfaith dialogue.", topics: ["World Religions","Ethics & Morality","Catholic Tradition","Social Justice"] },
+        ],
+        electives: [
+            { name: "HPE", tag: "Semester Rotation", description: "All Year 9 students complete 1 compulsory semester of HPE.", topics: ["Physical Fitness","Team Sport","Health Education","Wellbeing"] },
+            { name: "Agriculture", tag: "Semester Elective", description: "Advanced agricultural practices, land management and primary industries.", topics: ["Crop Management","Animal Science","Agribusiness","Environmental Sustainability"] },
+            { name: "Athletic Development in Sport", tag: "Semester Elective", description: "Sport-specific performance development, athletic training and sports psychology.", topics: ["Performance Analysis","Training Periodisation","Sports Psychology","Competition Prep"] },
+            { name: "Concert Band", tag: "Semester Elective", description: "Higher-level ensemble performance with public performance opportunities.", topics: ["Advanced Ensemble","Sight Reading","Performance Preparation","Music Theory"] },
+            { name: "Contemporary Ensemble", tag: "Semester Elective", description: "Contemporary music ensemble with original works and live performance.", topics: ["Original Composition","Stage Performance","Music Production","Genre Study"] },
+            { name: "Digital Technology", tag: "Semester Elective", description: "Advanced coding, data analysis and software development concepts.", topics: ["Python / Coding","Data Analysis","Networks","Cybersecurity Basics"] },
+            { name: "Industrial Technology & Design", tag: "Semester Elective", description: "Major project-based work in materials technology including timber, metal and 3D fabrication.", topics: ["Major Project","CNC & Laser Cutting","Joinery Techniques","Product Finishing"] },
+            { name: "Visual Art", tag: "Semester Elective", description: "Portfolio-based art study developing a personal artistic voice.", topics: ["Portfolio Development","Conceptual Art","Mixed Media","Exhibition & Critique"] },
+        ]
+    },
+    y10: {
+        core: [
+            { name: "English", tag: "4 periods/week", description: "Preparation for senior English. Complex texts, analytical writing and oral communication.", topics: ["Reading & Comprehension","Analytical Writing","Persuasive Texts","Oral Communication","Literature"] },
+            { name: "Methods / General / Essential Mathematics", tag: "4 periods/week", description: "Students choose their maths pathway — Methods for STEM, General for most pathways, Essential for vocational.", topics: ["Algebra","Geometry","Statistics","Financial Maths","Calculus Intro (Methods)"] },
+            { name: "Science", tag: "4 periods/week", description: "Consolidating science knowledge before senior specialisation in Year 11.", topics: ["Biology","Chemistry","Physics","Earth Science","Scientific Inquiry"] },
+            { name: "Humanities", tag: "3 periods/week", description: "Deepening understanding of history, geography, economics and democracy.", topics: ["History","Geography","Economics","Civics & Citizenship"] },
+            { name: "RE / Study of Religion", tag: "3 periods/week", description: "Students may choose RE or Study of Religion in Year 10.", topics: ["World Religions","Ethics","Catholic Tradition","Social Justice","Philosophy of Religion"] },
+        ],
+        electives: [
+            { name: "Agriculture", tag: "Semester Elective", description: "Advanced agricultural practices, agribusiness and land management.", topics: ["Agribusiness","Crop Science","Animal Science","Sustainability"] },
+            { name: "Athletic Development in Sport", tag: "Semester Elective", description: "High-performance sport training and athletic science.", topics: ["Performance Analysis","Training Programs","Sports Psychology","Competition"] },
+            { name: "Business & Law", tag: "Semester Elective", description: "Introduction to business and legal concepts for students interested in commerce or law.", topics: ["Business Structures","Consumer Law","Marketing","Financial Literacy"] },
+            { name: "Concert Band", tag: "Semester Elective", description: "Advanced ensemble performance with external performance opportunities.", topics: ["Advanced Ensemble","Sight Reading","Performance","Music Theory"] },
+            { name: "Contemporary Ensemble", tag: "Semester Elective", description: "Contemporary music ensemble with original works and live performance focus.", topics: ["Original Composition","Stage Performance","Music Production","Genre Study"] },
+            { name: "Design Technology", tag: "Semester Elective", description: "Innovation and product design with CAD and real-world design briefs.", topics: ["Ideation & Prototyping","CAD Design","Graphics","Innovation Thinking"] },
+            { name: "Digital Technology", tag: "Semester Elective", description: "Advanced coding, cybersecurity and data science concepts.", topics: ["Python / Coding","Data Analysis","Networks","Cybersecurity"] },
+            { name: "Engineering & Math Pathways", tag: "Semester Elective", description: "Bridging subject for students planning engineering or advanced maths in Years 11–12.", topics: ["Applied Maths","Engineering Principles","Structural Design","Problem Solving"] },
+            { name: "Geography", tag: "Semester Elective", description: "Human and physical geography, environmental issues and global systems.", topics: ["Human Geography","Physical Geography","Climate","Globalisation"] },
+            { name: "History", tag: "Semester Elective", description: "In-depth study of significant 20th century events and their global impact.", topics: ["World War II","Cold War","Australian History","Source Analysis"] },
+            { name: "Industrial Technology & Design", tag: "Semester Elective", description: "Major project-based work with advanced materials and manufacturing techniques.", topics: ["Major Project","CNC & Laser Cutting","Joinery","Product Finishing"] },
+            { name: "Sport Fitness & Recreation", tag: "Semester Elective", description: "Fitness theory, recreation leadership and sport science.", topics: ["Fitness Testing","Program Design","Recreation Planning","Sport Leadership"] },
+            { name: "Sports Science", tag: "Semester Elective", description: "The science of sport — biomechanics, physiology and sports nutrition.", topics: ["Biomechanics","Exercise Physiology","Nutrition Science","Performance Analysis"] },
+            { name: "Visual Art", tag: "Semester Elective", description: "Portfolio-based art developing a personal artistic voice and body of work.", topics: ["Portfolio Development","Conceptual Art","Mixed Media","Exhibition & Critique"] },
+        ]
+    },
+    y11: {
+        core: [
+            { name: "English / Essential English", tag: "4 periods/week", description: "Senior English or Essential English depending on student pathway and goals.", topics: ["Analytical Writing","Creative Writing","Oral Communication","Literature","Text Types"] },
+            { name: "Methods / General / Essential Mathematics", tag: "4 periods/week", description: "Senior mathematics pathway — choose based on your future study goals.", topics: ["Algebra","Calculus (Methods)","Statistics","Financial Maths","Problem Solving"] },
+            { name: "Study of Religion / Religion & Ethics", tag: "4 periods/week", description: "Senior religion subject — students choose Study of Religion or Religion & Ethics.", topics: ["World Religions","Ethics","Philosophy","Faith Traditions","Social Justice"] },
+        ],
+        electives: [
+            { name: "Aquatic Practices", tag: "Full Year Elective", description: "Aquatic environments, water-based sports and aquaculture practices.", topics: ["Aquaculture","Water Safety","Aquatic Ecosystems","Practical Skills"] },
+            { name: "Biology", tag: "Full Year Elective", description: "Cells, genetics, evolution and ecosystems. Recommended for medicine and science pathways.", topics: ["Cell Biology","Genetics & DNA","Evolution","Ecosystems","Human Biology"] },
+            { name: "Business", tag: "Full Year Elective", description: "Business planning, marketing, finance and management in a real-world context.", topics: ["Business Planning","Marketing Strategy","Financial Management","Operations","Business Law"] },
+            { name: "Chemistry", tag: "Full Year Elective", description: "Chemical reactions, atomic structure, organic chemistry and quantitative analysis.", topics: ["Atomic Theory","Chemical Reactions","Organic Chemistry","Stoichiometry","Lab Work"] },
+            { name: "Design", tag: "Full Year Elective", description: "Creative design — full process from concept through to finished product.", topics: ["Design Process","Typography","Digital Design","Branding","Portfolio"] },
+            { name: "Digital Solutions", tag: "Full Year Elective", description: "Advanced coding, databases, UI design and software development.", topics: ["Python","Databases & SQL","UI/UX Design","Algorithms","Project Development"] },
+            { name: "Geography", tag: "Full Year Elective", description: "Senior geography covering globalisation, environmental change and inquiry.", topics: ["Globalisation","Climate Change","Urban Dynamics","Geographical Inquiry"] },
+            { name: "Legal Studies", tag: "Full Year Elective", description: "The Australian legal system, criminal law, civil law and justice issues.", topics: ["Criminal Law","Civil Law","Australian Legal System","Rights & Responsibilities"] },
+            { name: "Music", tag: "Full Year Elective", description: "Senior music — performance, composition and musicology.", topics: ["Performance","Composition","Musicology","Music Theory","Aural Skills"] },
+            { name: "Music in Practice", tag: "Full Year Elective", description: "Applied contemporary music for students in ensembles or who produce music.", topics: ["Contemporary Performance","Recording & Production","Arrangement","Live Music"] },
+            { name: "Physics", tag: "Full Year Elective", description: "Mechanics, waves, electricity, thermodynamics and modern physics. Essential for engineering.", topics: ["Mechanics","Electricity & Magnetism","Waves","Thermodynamics","Modern Physics"] },
+            { name: "Physical Education", tag: "Full Year Elective", description: "Theory and practical study of human movement, sport science and performance.", topics: ["Biomechanics","Sport Psychology","Exercise Physiology","Performance Analysis"] },
+            { name: "Specialist Mathematics", tag: "Full Year Elective", description: "Advanced mathematics for high-achieving students heading to STEM university pathways.", topics: ["Complex Numbers","Vectors","Calculus","Proof","Differential Equations"] },
+            { name: "Sport & Recreation", tag: "Full Year Elective", description: "Practical sport, recreation leadership and fitness theory.", topics: ["Leadership","Fitness Programming","Recreation Management","Practical Sport"] },
+            { name: "Visual Arts", tag: "Full Year Elective", description: "Senior visual art — major body of work developed for external assessment.", topics: ["Body of Work","Conceptual Development","Art Theory","Exhibition","Art Criticism"] },
+            { name: "Visual Arts in Practice", tag: "Full Year Elective", description: "Applied visual arts focusing on craft, design and studio practice.", topics: ["Studio Practice","Applied Design","Craft Techniques","Client Briefs"] },
+        ]
+    },
+    y12: {
+        core: [
+            { name: "English / Essential English", tag: "4 periods/week", description: "Final year senior English. Exam preparation, analytical and creative writing under pressure.", topics: ["Analytical Writing","Creative Writing","Oral Communication","Literature","Exam Technique"] },
+            { name: "Methods / General / Essential Mathematics", tag: "4 periods/week", description: "Senior maths final year — OP-contributing subject for many pathways.", topics: ["Algebra","Calculus (Methods)","Statistics","Financial Maths","Exam Prep"] },
+            { name: "Study of Religion / Religion & Ethics", tag: "4 periods/week", description: "Final year senior religion. Deep exploration of world views, ethics and faith.", topics: ["World Religions","Ethics","Philosophy","Faith Traditions","Social Justice"] },
+        ],
+        electives: [
+            { name: "Aquatic Practices", tag: "Full Year Elective", description: "Aquatic environments, water-based sports and aquaculture practices.", topics: ["Aquaculture","Water Safety","Aquatic Ecosystems","Practical Skills"] },
+            { name: "Biology", tag: "Full Year Elective", description: "Senior biology with exam-focused content on genetics, evolution and ecosystems.", topics: ["Cell Biology","Genetics & DNA","Evolution","Ecosystems","Human Biology"] },
+            { name: "Business", tag: "Full Year Elective", description: "Final year business — in-depth business case studies, strategy and law.", topics: ["Business Planning","Marketing Strategy","Financial Management","Operations","Business Law"] },
+            { name: "Chemistry", tag: "Full Year Elective", description: "Final year chemistry — industrial chemistry, organic synthesis and exam prep.", topics: ["Atomic Theory","Chemical Reactions","Organic Chemistry","Stoichiometry","Lab Work"] },
+            { name: "Design", tag: "Full Year Elective", description: "Major design folio and client project for external assessment.", topics: ["Design Process","Typography","Digital Design","Branding","Portfolio"] },
+            { name: "Digital Solutions", tag: "Full Year Elective", description: "Completing the major software project for assessment and exam preparation.", topics: ["Python","Databases & SQL","UI/UX Design","Algorithms","Project Development"] },
+            { name: "Geography", tag: "Full Year Elective", description: "Senior geography final year — fieldwork and extended written responses.", topics: ["Globalisation","Climate Change","Urban Dynamics","Fieldwork"] },
+            { name: "Legal Studies", tag: "Full Year Elective", description: "Final year legal studies with focus on exam technique and legal reasoning.", topics: ["Criminal Law","Civil Law","Australian Legal System","Rights & Responsibilities"] },
+            { name: "Music", tag: "Full Year Elective", description: "Final year music — portfolio performance and musicology extended response.", topics: ["Performance","Composition","Musicology","Music Theory","Aural Skills"] },
+            { name: "Music in Practice", tag: "Full Year Elective", description: "Final applied music project — recording, live performance and folio.", topics: ["Contemporary Performance","Recording & Production","Arrangement","Live Music"] },
+            { name: "Physics", tag: "Full Year Elective", description: "Final year physics — relativity, quantum mechanics and exam preparation.", topics: ["Mechanics","Electricity & Magnetism","Waves","Thermodynamics","Modern Physics"] },
+            { name: "Physical Education", tag: "Full Year Elective", description: "Final year PE — extended written tasks and practical performance assessment.", topics: ["Biomechanics","Sport Psychology","Exercise Physiology","Performance Analysis"] },
+            { name: "Specialist Mathematics", tag: "Full Year Elective", description: "Final year specialist maths for university STEM applicants.", topics: ["Complex Numbers","Vectors","Calculus","Proof","Differential Equations"] },
+            { name: "Sport & Recreation", tag: "Full Year Elective", description: "Final year sport and recreation with leadership project and practical assessment.", topics: ["Leadership","Fitness Programming","Recreation Management","Practical Sport"] },
+            { name: "Visual Arts", tag: "Full Year Elective", description: "Final body of work submitted for external assessment and exhibition.", topics: ["Body of Work","Conceptual Development","Art Theory","Exhibition","Art Criticism"] },
+            { name: "Visual Arts in Practice", tag: "Full Year Elective", description: "Final applied arts project — client brief, studio folio and critique.", topics: ["Studio Practice","Applied Design","Craft Techniques","Client Briefs"] },
+        ]
+    },
+    certs: {
+        core: [],
+        electives: [
+            { name: "Cert II – Automotive Vocational Prep", tag: "Certificate II • Yr 11 & 12", description: "Hands-on automotive training — vehicle maintenance and workplace skills.", topics: ["Vehicle Maintenance","Workplace Safety","Tools & Equipment","Industry Pathways"] },
+            { name: "Cert III – Aviation (Remote Pilot)", tag: "Certificate III • Yr 11 & 12", description: "Drone operation, aviation regulations and remote pilot licensing.", topics: ["Drone Operation","Aviation Regulations","Flight Planning","Safety Procedures"] },
+            { name: "Cert II – Construction Pathways", tag: "Certificate II • Yr 11 & 12", description: "Entry-level construction — site safety, hand tools and basic building techniques.", topics: ["Construction Safety","Hand & Power Tools","Building Materials","Site Operations"] },
+            { name: "Cert II – Rural Operations", tag: "Certificate II • Yr 11 & 12", description: "Rural work skills — fencing, land care, livestock handling and farm safety.", topics: ["Livestock Handling","Fencing","Land & Water Management","Farm Safety"] },
+            { name: "Cert II – Tourism", tag: "Certificate II • Yr 11 & 12", description: "Tourism and hospitality — customer service, events and tourism operations.", topics: ["Customer Service","Tourism Operations","Events","Industry Awareness"] },
+            { name: "Cert II – Engineering Pathways", tag: "Certificate II • Yr 11 & 12", description: "Foundational engineering — machining, fabrication and engineering drawing.", topics: ["Engineering Drawing","Machining","Fabrication","Workplace Safety"] },
+            { name: "Cert II – Electrotechnology", tag: "Certificate II • Yr 11 & 12", description: "Introductory electrical skills for students pursuing an electrical trade or engineering career.", topics: ["Electrical Safety","Circuits","Wiring Fundamentals","Industry Standards"] },
+        ]
+    }
+};
+
+let activeTab = "y7";
+let activeSubject = null;
+let activeSection = null;
+let currentUserData = null;
+let userComputedGrade = null;
+const TAB_GRADES = { y7:7, y8:8, y9:9, y10:10, y11:11, y12:12, certs:99 };
+
+function computeGrade(user) {
+    if (!user || user.role === 'teacher') return 'teacher';
+    if (!user.initialGrade || !user.gradeYear) return 7;
+    const elapsed = new Date().getFullYear() - user.gradeYear;
+    const g = user.initialGrade + elapsed;
+    if (g > 12) return 'graduated';
+    return Math.min(g, 12);
+}
+
+function canAccessTab(tab) {
+    const state = getTabState(tab);
+    return state === 'locked' ? 'locked' : 'full';
+}
+
+function getTabState(tab) {
+    // Returns 'current' | 'archived' | 'locked' | 'full'
+    if (!currentUserData) return 'locked';
+    if (currentUserData.role === 'teacher' || userComputedGrade === 'graduated') return 'full';
+    const g = TAB_GRADES[tab];
+    if (g === 99) return 'locked';
+    if (g === userComputedGrade) return 'current';
+    if (g < userComputedGrade) return 'archived';
+    return 'locked';
+}
+
+function buildSidebarTabs() {
+    const tabs = ["y7","y8","y9","y10","y11","y12","certs"];
+    const rawLabels = { y7:"YEAR 7", y8:"YEAR 8", y9:"YEAR 9", y10:"YEAR 10", y11:"YEAR 11", y12:"YEAR 12", certs:"CERTIFICATES" };
+    const sidebar = document.getElementById("sidebar");
+    sidebar.innerHTML = '<div id="sidebar-label">YEAR GROUP</div>';
+
+    tabs.forEach(tab => {
+        const state = getTabState(tab);
+        const btn = document.createElement("button");
+        const isActive = tab === activeTab;
+
+        let icon = '', extraClass = '', style = '', title = '';
+        if (state === 'locked') {
+            icon = '🔒 '; extraClass = ' locked-tab'; style = 'cursor:not-allowed;';
+            title = 'Not yet accessible';
+        } else if (state === 'archived') {
+            icon = '🗂 '; extraClass = ' archived-tab';
+            title = 'Archived — completed year';
+        } else if (state === 'current') {
+            icon = '📍 '; extraClass = ' current-tab';
+            title = 'Your current year';
+        } else {
+            icon = ''; // teacher/graduated — no icon needed
+        }
+
+        btn.className = "sidebar-tab" + extraClass + (isActive ? " active" : "");
+        btn.style.cssText = style;
+        btn.title = title;
+        btn.innerHTML = icon + rawLabels[tab];
+        if (state !== 'locked') btn.onclick = () => switchTab(tab);
+        sidebar.appendChild(btn);
+    });
+
+    // Grade tag at bottom
+    let tagText = '', tagColor = getComputedStyle(document.documentElement).getPropertyValue('--scp-green').trim() || '#3fbf3f';
+    if (currentUserData.role === 'teacher') { tagText = '🏫 TEACHER'; tagColor = '#ffcc00'; }
+    else if (userComputedGrade === 'graduated') { tagText = '🎓 GRADUATED'; tagColor = '#ffcc00'; }
+    else { tagText = `📍 YEAR ${userComputedGrade} — CURRENT`; }
+    const tag = document.createElement("div");
+    tag.style = `padding:10px 16px;font-size:10px;letter-spacing:1.5px;color:${tagColor};border-top:1px solid #1a1a1a;margin-top:auto;opacity:0.9;`;
+    tag.innerText = tagText;
+    sidebar.appendChild(tag);
+}
+
+function switchTab(tab) {
+    if (canAccessTab(tab) === 'locked') return;
+    activeTab = tab;
+    activeSubject = null;
+    activeSection = null;
+    buildSidebarTabs();
+    const rawLabels = { y7:"YEAR 7", y8:"YEAR 8", y9:"YEAR 9", y10:"YEAR 10", y11:"YEAR 11", y12:"YEAR 12", certs:"CERTIFICATES" };
+    const state = getTabState(tab);
+    const suffix = state === 'archived' ? ' — ARCHIVED' : state === 'current' ? ' — CURRENT' : '';
+    document.getElementById("subject-panel-label").innerText = rawLabels[tab] + suffix;
+    renderSubjectList();
+    document.getElementById("content-panel").innerHTML = '<div id="content-placeholder">// SELECT A SUBJECT //</div>';
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/`/g, '&#x60;');
+}
+
+function renderSubjectList() {
+    const list = document.getElementById("subject-list");
+    list.innerHTML = "";
+    const data = SUBJECTS[activeTab];
+    if (data.core && data.core.length > 0) {
+        const hdr = document.createElement("div");
+        hdr.style = "padding:8px 14px;font-size:10px;letter-spacing:2px;color:var(--scp-green);border-bottom:1px solid color-mix(in srgb, var(--scp-green) 15%, transparent);background:var(--scp-bg,#000);opacity:0.8;";
+        hdr.innerText = "// CORE SUBJECTS";
+        list.appendChild(hdr);
+        data.core.forEach((s, i) => {
+            const div = document.createElement("div");
+            div.className = "subject-item" + (activeSection === "core" && activeSubject === i ? " active" : "");
+            div.onclick = () => openSubject("core", i);
+            div.innerHTML = `<div class="subject-name">${escapeHtml(s.name)}</div><div class="subject-tag">${escapeHtml(s.tag)}</div>`;
+            list.appendChild(div);
+        });
+    }
+    if (data.electives && data.electives.length > 0) {
+        const hdr = document.createElement("div");
+        hdr.style = "padding:8px 14px;font-size:10px;letter-spacing:2px;color:#ffcc00;border-bottom:1px solid color-mix(in srgb, var(--scp-green) 15%, transparent);border-top:1px solid #111;background:var(--scp-bg,#000);opacity:0.8;margin-top:4px;";
+        hdr.innerText = activeTab === "certs" ? "// CERTIFICATES" : "// ELECTIVES";
+        list.appendChild(hdr);
+        data.electives.forEach((s, i) => {
+            const div = document.createElement("div");
+            div.className = "subject-item" + (activeSection === "elective" && activeSubject === i ? " active" : "");
+            div.onclick = () => openSubject("elective", i);
+            div.innerHTML = `<div class="subject-name">${escapeHtml(s.name)}</div><div class="subject-tag">${escapeHtml(s.tag)}</div>`;
+            list.appendChild(div);
+        });
+    }
+}
+
+// ── TUTOR RESOURCES ───────────────────────────────────────────────────────────
+function getTutorResources() { return JSON.parse(localStorage.getItem('scpTutorResources')) || []; }
+function saveTutorResources(r) { localStorage.setItem('scpTutorResources', JSON.stringify(r)); }
+
+function getSubjectKey(tab, section, index) { return `${tab}_${section}_${index}`; }
+
+function renderResources(subjectKey) {
+    const isTeacher = currentUserData && currentUserData.role === 'teacher';
+    const isAdmin = currentUserData && Array.isArray(currentUserData.access) && currentUserData.access.includes('Admin');
+    const resources = getTutorResources().filter(r => r.subjectKey === subjectKey);
+    const block = document.getElementById('resources-block');
+    if (!block) return;
+
+    let html = `<div class="info-block-title">TUTOR RESOURCES</div>`;
+
+    if (isTeacher || isAdmin) {
+        html += `
+        <div id="upload-area" style="border:2px dashed #1a3a1a;padding:16px;text-align:center;cursor:pointer;transition:0.15s;"
+             ondragover="event.preventDefault();this.style.borderColor='var(--scp-green)'"
+             ondragleave="this.style.borderColor='#1a3a1a'"
+             ondrop="handleResourceDrop(event,'${subjectKey}')"
+             onclick="document.getElementById('res-file-input-${subjectKey.replace(/[^a-z0-9]/gi,'_')}').click()">
+            <div style="font-size:11px;letter-spacing:2px;color:#2a5a2a;">📁 DRAG & DROP OR CLICK TO UPLOAD</div>
+        </div>
+        <input type="file" id="res-file-input-${subjectKey.replace(/[^a-z0-9]/gi,'_')}" style="display:none" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.mp4,.pptx,.xlsx" onchange="handleResourceSelect(event,'${subjectKey}')"/>
+        <div id="upload-meta-${subjectKey.replace(/[^a-z0-9]/gi,'_')}" style="display:none;flex-direction:column;gap:8px;padding:10px;border:1px solid #1a1a1a;">
+            <div style="font-size:10px;letter-spacing:1.5px;color:var(--scp-green-soft);">RESOURCE DETAILS</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <select id="res-term" style="padding:6px 10px;background:#050505;border:1px solid var(--scp-green);color:var(--scp-green);font-size:12px;outline:none;cursor:pointer;">
+                    <option value="">TERM...</option><option>Term 1</option><option>Term 2</option><option>Term 3</option><option>Term 4</option>
+                </select>
+                <select id="res-week" style="padding:6px 10px;background:#050505;border:1px solid var(--scp-green);color:var(--scp-green);font-size:12px;outline:none;cursor:pointer;">
+                    <option value="">WEEK...</option>${[...Array(10)].map((_,i)=>`<option>Week ${i+1}</option>`).join('')}
+                </select>
+                <select id="res-lesson" style="padding:6px 10px;background:#050505;border:1px solid var(--scp-green);color:var(--scp-green);font-size:12px;outline:none;cursor:pointer;">
+                    <option value="">LESSON...</option><option>Lesson 1</option><option>Lesson 2</option><option>Lesson 3</option><option>Lesson 4</option><option>Lesson 5</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <span id="res-pending-name" style="font-size:11px;color:var(--scp-gray-text);flex:1;"></span>
+                <button onclick="confirmResourceUpload('${subjectKey}')" style="padding:7px 14px;background:var(--scp-green);color:#000;border:none;font-size:11px;font-weight:bold;letter-spacing:1.5px;cursor:pointer;">▶ UPLOAD</button>
+                <button onclick="cancelResourceUpload('${subjectKey.replace(/[^a-z0-9]/gi,'_')}')" style="padding:7px 14px;background:transparent;border:1px solid #333;color:#666;font-size:11px;cursor:pointer;">✕</button>
+            </div>
+        </div>`;
+    }
+
+    if (resources.length === 0) {
+        html += `<div class="coming-soon"><div class="coming-soon-icon">📂</div><div class="coming-soon-text">// NO RESOURCES YET //</div></div>`;
+    } else {
+        // Group by Term > Week > Lesson
+        const grouped = {};
+        resources.forEach(r => {
+            const t = r.term || 'No Term', w = r.week || 'No Week';
+            if (!grouped[t]) grouped[t] = {};
+            if (!grouped[t][w]) grouped[t][w] = [];
+            grouped[t][w].push(r);
+        });
+        html += `<div style="display:flex;flex-direction:column;gap:12px;">`;
+        Object.keys(grouped).sort().forEach(term => {
+            html += `<div style="border-left:2px solid var(--scp-green);padding-left:12px;">
+                <div style="font-size:10px;letter-spacing:2px;color:var(--scp-green);margin-bottom:6px;">${term}</div>`;
+            Object.keys(grouped[term]).sort().forEach(week => {
+                html += `<div style="margin-bottom:8px;">
+                    <div style="font-size:10px;letter-spacing:1.5px;color:var(--scp-gray-text);margin-bottom:4px;">${week}</div>`;
+                grouped[term][week].forEach(r => {
+                    const canDel = isAdmin || (isTeacher && r.uploadedBy === currentUserData.username);
+                    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #1a1a1a;background:#030303;margin-bottom:4px;">
+                        <span style="font-size:18px;">📄</span>
+                        <div style="flex:1;">
+                            <div style="font-size:12px;color:var(--scp-green);">${escapeHtml(r.title)}</div>
+                            <div style="font-size:10px;color:var(--scp-gray-text);">${escapeHtml(r.lesson || '')} · ${escapeHtml(r.fileName)} · by ${escapeHtml(r.uploadedBy)}</div>
+                        </div>
+                        <a href="${(typeof r.fileData==='string'&&/^data:[a-zA-Z0-9+\/]+;base64,/.test(r.fileData))?r.fileData:'#'}" download="${escapeHtml(r.fileName)}" style="padding:4px 10px;border:1px solid var(--scp-green);color:var(--scp-green);font-size:10px;letter-spacing:1px;text-decoration:none;cursor:pointer;">⬇ SAVE</a>
+                        ${canDel ? `<button onclick="deleteResource('${r.id}')" style="padding:4px 8px;border:1px solid var(--scp-red);color:var(--scp-red);background:transparent;font-size:10px;cursor:pointer;">✕</button>` : ''}
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+            html += `</div>`;
+        });
+        html += `</div>`;
+    }
+    block.innerHTML = html;
+}
+
+let pendingResourceFile = null;
+let pendingResourceSubjectKey = null;
+
+function handleResourceDrop(event, subjectKey) {
+    event.preventDefault();
+    document.getElementById('upload-area').style.borderColor = '#1a3a1a';
+    const file = event.dataTransfer.files[0];
+    if (file) showResourceMeta(file, subjectKey);
+}
+
+function handleResourceSelect(event, subjectKey) {
+    const file = event.target.files[0];
+    if (file) showResourceMeta(file, subjectKey);
+}
+
+function showResourceMeta(file, subjectKey) {
+    pendingResourceFile = file;
+    pendingResourceSubjectKey = subjectKey;
+    const safeKey = subjectKey.replace(/[^a-z0-9]/gi,'_');
+    document.getElementById(`res-pending-name`).innerText = file.name;
+    const metaDiv = document.getElementById(`upload-meta-${safeKey}`);
+    metaDiv.style.display = 'flex';
+}
+
+function cancelResourceUpload(safeKey) {
+    pendingResourceFile = null;
+    document.getElementById(`upload-meta-${safeKey}`).style.display = 'none';
+}
+
+function confirmResourceUpload(subjectKey) {
+    if (!pendingResourceFile) return;
+    const term = document.getElementById('res-term').value;
+    const week = document.getElementById('res-week').value;
+    const lesson = document.getElementById('res-lesson').value;
+    if (!term || !week || !lesson) { alert('Please select Term, Week and Lesson.'); return; }
+
+    // Validate file type and size before reading
+    const ALLOWED_TYPES = ['application/pdf','application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain','image/png','image/jpeg','image/gif','image/webp'];
+    const ALLOWED_EXTS = ['pdf','doc','docx','ppt','pptx','xls','xlsx','txt','png','jpg','jpeg','gif','webp'];
+    const ext = pendingResourceFile.name.split('.').pop().toLowerCase();
+    const type = pendingResourceFile.type;
+    if (!ALLOWED_EXTS.includes(ext) || (!ALLOWED_TYPES.includes(type) && type !== '')) {
+        alert('File type not allowed. Permitted: PDF, Word, PowerPoint, Excel, plain text, images.'); return;
+    }
+    if (pendingResourceFile.size > 5 * 1024 * 1024) {
+        alert('File too large. Maximum size is 5MB.'); return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Verify the data URI starts with a safe base64 prefix
+        const dataUri = e.target.result;
+        if (typeof dataUri !== 'string' || !/^data:[a-zA-Z0-9+/]+;base64,/.test(dataUri)) {
+            alert('File could not be read safely.'); return;
+        }
+        const resources = getTutorResources();
+        resources.push({
+            id: Date.now().toString(),
+            subjectKey,
+            title: pendingResourceFile.name.replace(/\.[^.]+$/, ''),
+            fileName: pendingResourceFile.name,
+            fileData: dataUri,
+            term, week, lesson,
+            uploadedBy: currentUserData.username,
+            uploadedAt: Date.now()
+        });
+        saveTutorResources(resources);
+        pendingResourceFile = null;
+        renderResources(subjectKey);
+    };
+    reader.readAsDataURL(pendingResourceFile);
+}
+
+function deleteResource(id) {
+    if (!confirm('Delete this resource?')) return;
+    saveTutorResources(getTutorResources().filter(r => r.id !== id));
+    renderResources(pendingResourceSubjectKey || '');
+}
+
+function openSubject(section, index) {
+    activeSection = section;
+    activeSubject = index;
+    renderSubjectList();
+    const s = SUBJECTS[activeTab][section === "core" ? "core" : "electives"][index];
+    const panel = document.getElementById("content-panel");
+    const isCore = section === "core";
+    const topicBadges = s.topics.map(t => `<span class="info-badge${isCore ? "" : " gold"}">${t}</span>`).join("");
+    const subjectKey = getSubjectKey(activeTab, section, index);
+
+    panel.innerHTML = `
+        <div id="content-header">
+            <div id="content-header-name">${escapeHtml(s.name).toUpperCase()}</div>
+            <div id="content-header-sub">${isCore ? "Core Subject" : activeTab === "certs" ? "VET Certificate" : "Elective"} &nbsp;·&nbsp; ${s.tag}</div>
+        </div>
+        <div id="content-body">
+            <div class="info-block">
+                <div class="info-block-title">OVERVIEW</div>
+                <div class="info-block-body">${s.description}</div>
+            </div>
+            <div class="info-block">
+                <div class="info-block-title">KEY TOPICS</div>
+                <div class="info-block-body">${topicBadges}</div>
+            </div>
+            <div class="info-block" id="resources-block"></div>
+        </div>
+    `;
+    renderResources(subjectKey);
+}
+
+window.onload = function() {
+    const username = localStorage.getItem("loggedInUser");
+    if (!username) { window.location.href = "Index.html"; return; }
+    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    currentUserData = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+    if (!currentUserData || !Array.isArray(currentUserData.access) || !currentUserData.access.includes("Tutors")) {
+        document.getElementById("main").innerHTML =
+            '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
+        return;
+    }
+    userComputedGrade = computeGrade(currentUserData);
+    // Auto-set initial tab to user's grade
+    if (currentUserData.role !== 'teacher' && userComputedGrade !== 'graduated') {
+        const gradeToTab = {7:'y7',8:'y8',9:'y9',10:'y10',11:'y11',12:'y12'};
+        activeTab = gradeToTab[userComputedGrade] || 'y7';
+    }
+    buildSidebarTabs();
+    const rawLabels = { y7:"YEAR 7", y8:"YEAR 8", y9:"YEAR 9", y10:"YEAR 10", y11:"YEAR 11", y12:"YEAR 12", certs:"CERTIFICATES" };
+    const initState = getTabState(activeTab);
+    const initSuffix = initState === 'archived' ? ' — ARCHIVED' : initState === 'current' ? ' — CURRENT' : '';
+    document.getElementById("subject-panel-label").innerText = rawLabels[activeTab] + initSuffix;
+    renderSubjectList();
+};
+</script>
+
+<script>
+/* scpTheme-postload */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(!t.bg && !t.accent) return;
+    function applyEl(id){ var el=document.getElementById(id); if(el&&t.bg) el.style.backgroundColor=t.bg; }
+    function run(){ applyEl('header'); applyEl('navbar'); if(t.bg) document.body.style.backgroundColor=t.bg; }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
+    else run();
+})();
+</script>
+</body>
+</html>

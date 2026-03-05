@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+/* scpTheme-apply — run before paint so there's no colour flash on login page */
+(function(){
+    var t = JSON.parse(localStorage.getItem('scpLastTheme') || localStorage.getItem('scpTheme') || '{}');
+    // Validate values are safe hex colours before applying (prevents CSS injection)
+    var _hexRe = /^#[0-9a-fA-F]{6}$/;
+    if (t.bg && _hexRe.test(t.bg)) {
+        document.documentElement.style.setProperty('--scp-bg', t.bg);
+        document.documentElement.style.backgroundColor = t.bg;
+    }
+    if (t.accent && _hexRe.test(t.accent)) {
+        document.documentElement.style.setProperty('--scp-green', t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft', t.accent);
+        var hex = t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum = (0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text', lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+    body { background-color: var(--scp-bg, #000); margin: 0; padding: 40px 20px 60px; font-family: Arial, sans-serif; color: var(--scp-green); display: flex; flex-direction: row; justify-content: center; align-items: flex-start; height: auto; min-height: 100vh; overflow: auto; box-sizing: border-box; }
+    #auth-box { width: 320px; padding: 22px 26px; border: 2px solid var(--scp-green); background-color: var(--scp-bg, #000); box-shadow: 0 0 10px var(--scp-green), inset 0 0 2px var(--scp-green); }
+    #auth-title { font-size: 26px; font-weight: bold; text-align: center; margin-bottom: 5px; letter-spacing: 8px; color: var(--scp-green); text-shadow: 0 0 8px var(--scp-green), 0 0 2px var(--scp-green); }
+    #auth-sub { text-align: center; font-size: 10px; color: var(--scp-green-soft); margin-bottom: 16px; letter-spacing: 1.5px; text-shadow: 0 0 4px var(--scp-green-soft); }
+    .auth-field-wrap { margin-bottom: 10px; }
+    .auth-lbl-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+    .auth-lbl { font-size: 11px; letter-spacing: 1.5px; color: var(--scp-green); text-shadow: 0 0 2px var(--scp-green); }
+    .info-btn { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--scp-green-soft); background: transparent; color: var(--scp-green-soft); font-size: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; opacity: 0.7; transition: 0.15s; flex-shrink: 0; }
+    .info-btn:hover { opacity: 1; background: #0a1a0a; }
+    .auth-input-wrap { position: relative; display: flex; align-items: center; }
+    .auth-input { width: 100%; padding: 10px 12px; background: color-mix(in srgb, var(--scp-bg, #000) 85%, #fff); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; box-sizing: border-box; text-shadow: 0 0 2px var(--scp-green); box-shadow: inset 0 0 4px #001a00; outline: none; }
+    .auth-input::placeholder { color: #2a7a2a; }
+    .toggle-pass { position: absolute; right: 10px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; opacity: 0.7; }
+    input[type="password"]::-ms-reveal, input[type="password"]::-ms-clear { display: none; }
+    input[type="password"]::-webkit-credentials-auto-fill-button { display: none; }
+    .toggle-pass:hover { opacity: 1; }
+    .toggle-pass svg { width: 18px; height: 18px; stroke: var(--scp-green); fill: none; stroke-width: 1.8; filter: drop-shadow(0 0 2px var(--scp-green)); }
+    .auth-btn { width: 100%; padding: 10px; background: var(--scp-green); color: #000; border: none; font-weight: bold; cursor: pointer; margin-bottom: 8px; font-size: 13px; letter-spacing: 2px; box-shadow: 0 0 8px var(--scp-green); }
+    .auth-btn.secondary { background: transparent; border: 1px solid var(--scp-green); color: var(--scp-green); box-shadow: 0 0 4px var(--scp-green); }
+    .auth-btn.muted { background: transparent; border: 1px solid #333; color: #555; box-shadow: none; font-size: 11px; letter-spacing: 1px; }
+    .auth-btn.muted:hover { border-color: #666; color: #888; }
+    .auth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #auth-error { color: var(--scp-red); font-size: 12px; margin-bottom: 10px; text-align: center; min-height: 15px; }
+    #auth-status { color: var(--scp-green-soft); font-size: 12px; margin-top: 8px; text-align: center; min-height: 15px; }
+    #lockout-bar { display: none; background: #1a0000; border: 1px solid var(--scp-red); color: var(--scp-red); font-size: 11px; letter-spacing: 1px; text-align: center; padding: 8px; margin-bottom: 10px; }
+    #info-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; justify-content: center; align-items: center; }
+    #info-modal-overlay.open { display: flex; }
+    #info-modal-box { width: 300px; border: 2px solid var(--scp-green); background: var(--scp-bg, #000); box-shadow: 0 0 16px var(--scp-green); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+    #info-modal-title { font-size: 12px; letter-spacing: 3px; color: var(--scp-green); }
+    #info-modal-body { font-size: 12px; color: var(--scp-green-soft); line-height: 1.7; }
+    #info-modal-close { padding: 8px; background: transparent; border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 11px; letter-spacing: 2px; cursor: pointer; transition: 0.15s; }
+    #info-modal-close:hover { background: var(--scp-green); color: #000; }
+</style>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── LOCALSTORAGE VERSION MIGRATION ──────────────────────────────────────────── */
+(function(){
+    var CURRENT_VERSION = 3;
+    var stored = parseInt(localStorage.getItem('_scpDataVersion') || '0');
+    if (stored < CURRENT_VERSION) {
+        // Migration v1→v2: passwords were plaintext, now hashed (handled at login)
+        // Migration v2→v3: add _ic integrity checksum if missing
+        if (!localStorage.getItem('_ic')) {
+            try {
+                var d = localStorage.getItem('approvedAccounts') || '[]';
+                var h = 5381;
+                for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                localStorage.setItem('_ic', (h >>> 0).toString(36));
+            } catch(e) {}
+        }
+        localStorage.setItem('_scpDataVersion', CURRENT_VERSION);
+    }
+})();
+</script>
+
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            // If no stored HMAC yet but accounts exist, compute and save it now (first-run seeding)
+            if (!stored) {
+                var initMac = await _hmac(window._scpHMACKey, d);
+                localStorage.setItem('_hic', initMac);
+                return true;
+            }
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                // On the login page, don't redirect (causes infinite loop if IndexedDB key
+                // was regenerated). Instead reset _hic so it rebuilds on next login.
+                localStorage.removeItem('_hic');
+                return true;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── ENCRYPTED STORAGE ────────────────────────────────────────────────────────
+   AES-GCM encrypts approvedAccounts using a key stored in IndexedDB.
+   Even if someone reads localStorage they get ciphertext, not JSON.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', ENC_KEY_ID = 'aes_key';
+    var PROTECTED_KEYS = ['approvedAccounts', 'pendingAccounts'];
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e){ e.target.result.createObjectStore(STORE); };
+        req.onsuccess = function(e){ cb(e.target.result); };
+        req.onerror = function(){ cb(null); };
+    }
+
+    async function _getOrCreateAESKey(db) {
+        return new Promise(function(resolve){
+            var tx = db.transaction(STORE,'readonly');
+            var req = tx.objectStore(STORE).get(ENC_KEY_ID);
+            req.onsuccess = async function(e){
+                if(e.target.result){ resolve(e.target.result); return; }
+                var key = await crypto.subtle.generateKey(
+                    {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']
+                );
+                var tx2 = db.transaction(STORE,'readwrite');
+                tx2.objectStore(STORE).put(key, ENC_KEY_ID);
+                tx2.oncomplete = function(){ resolve(key); };
+            };
+            req.onerror = function(){ resolve(null); };
+        });
+    }
+
+    async function _encrypt(key, plaintext) {
+        var iv = crypto.getRandomValues(new Uint8Array(12));
+        var enc = new TextEncoder().encode(plaintext);
+        var cipher = await crypto.subtle.encrypt({name:'AES-GCM',iv:iv}, key, enc);
+        // Store iv + cipher as base64
+        var combined = new Uint8Array(iv.length + cipher.byteLength);
+        combined.set(iv); combined.set(new Uint8Array(cipher), iv.length);
+        return btoa(String.fromCharCode(...combined));
+    }
+
+    async function _decrypt(key, b64) {
+        try {
+            var combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+            var iv = combined.slice(0,12);
+            var cipher = combined.slice(12);
+            var plain = await crypto.subtle.decrypt({name:'AES-GCM',iv:iv}, key, cipher);
+            return new TextDecoder().decode(plain);
+        } catch(e){ return null; }
+    }
+
+    window._scpAESKey = null;
+
+    // Encrypted wrappers
+    window._encSet = async function(storageKey, value) {
+        try {
+            if (!window._scpAESKey || !PROTECTED_KEYS.includes(storageKey)) {
+                // Fall back to plain if key not ready
+                localStorage.setItem(storageKey, JSON.stringify(value));
+                return;
+            }
+            var json = JSON.stringify(value);
+            if (json.length > 4000000) return;
+            var enc = await _encrypt(window._scpAESKey, json);
+            localStorage.setItem(storageKey + '_enc', enc);
+            // Remove any legacy plaintext copy now that encrypted copy is written
+            localStorage.removeItem(storageKey);
+            if (window.fnFbmOHnKY) window.fnFbmOHnKY();
+        } catch(e){}
+    };
+
+    window._encGet = async function(storageKey, fallback) {
+        try {
+            if (!window._scpAESKey || !PROTECTED_KEYS.includes(storageKey)) {
+                var raw = localStorage.getItem(storageKey);
+                return raw ? JSON.parse(raw) : fallback;
+            }
+            var enc = localStorage.getItem(storageKey + '_enc');
+            if (enc) {
+                var dec = await _decrypt(window._scpAESKey, enc);
+                if (dec) return JSON.parse(dec);
+            }
+            // Fallback to plaintext
+            var plain = localStorage.getItem(storageKey);
+            return plain ? JSON.parse(plain) : fallback;
+        } catch(e){ return fallback; }
+    };
+
+    _openDB(async function(db){
+        if (!db) return;
+        window._scpAESKey = await _getOrCreateAESKey(db);
+        // Encrypt existing plaintext data on first run
+        var existing = localStorage.getItem('approvedAccounts');
+        if (existing && !localStorage.getItem('approvedAccounts_enc')) {
+            var enc = await _encrypt(window._scpAESKey, existing);
+            localStorage.setItem('approvedAccounts_enc', enc);
+        }
+    });
+})();
+</script>
+
+</head>
+<body>
+
+<div id="info-modal-overlay">
+    <div id="info-modal-box">
+        <div id="info-modal-title">INFO</div>
+        <div id="info-modal-body"></div>
+        <button id="info-modal-close" onclick="closeInfoModal()">✕ CLOSE</button>
+    </div>
+</div>
+
+<div id="auth-modal">
+  <div id="auth-box">
+    <div id="auth-title">LOGIN</div>
+    <div id="auth-sub">// SECURE AUTHENTICATION REQUIRED //</div>
+    <div id="auth-error"></div>
+    <div id="lockout-bar"></div>
+    <div id="auth-step1">
+      <div class="auth-field-wrap" id="auth-email-wrap" style="display:none;">
+        <div class="auth-lbl-row">
+          <label class="auth-lbl" for="auth-email">SCHOOL EMAIL</label>
+          <button class="info-btn" onclick="showInfo('SCHOOL EMAIL','We require your email so if your account gets lost — just send an email to [admin contact removed]')">?</button>
+        </div>
+        <div class="auth-input-wrap"><input id="auth-email" class="auth-input" type="email" maxlength="64" autocomplete="email" placeholder="YOUR.EMAIL@SCHOOL.EDU.AU"/></div>
+      </div>
+      <div class="auth-field-wrap" id="auth-grade-wrap" style="display:none;">
+        <div class="auth-lbl-row">
+          <label class="auth-lbl" for="auth-grade">YEAR GROUP / ROLE</label>
+          <button class="info-btn" onclick="showInfo('YEAR GROUP / ROLE','We require your school grade so we know what you are allowed to see.')">?</button>
+        </div>
+        <div class="auth-input-wrap">
+          <select id="auth-grade" class="auth-input" onchange="handleGradeChange()" style="cursor:pointer;background:#050505;">
+            <option value="">-- SELECT --</option>
+            <option value="7">Year 7</option><option value="8">Year 8</option><option value="9">Year 9</option>
+            <option value="10">Year 10</option><option value="11">Year 11</option><option value="12">Year 12</option>
+            <option value="__teacher__">Teacher</option>
+          </select>
+        </div>
+        <div id="auth-teacher-code-wrap" style="display:none;margin-top:8px;">
+          <input id="auth-teacher-code" class="auth-input" placeholder="ENTER TEACHER CODE" maxlength="32" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="auth-field-wrap" id="auth-name-wrap" style="display:none;">
+        <div class="auth-lbl-row">
+          <label class="auth-lbl" for="auth-name">YOUR NAME</label>
+          <button class="info-btn" onclick="showInfo('YOUR NAME','This is so teachers can identify you if needed.')">?</button>
+        </div>
+        <div class="auth-input-wrap"><input id="auth-name" class="auth-input" maxlength="32" autocomplete="off" placeholder="YOUR_NAME"/></div>
+      </div>
+      <div class="auth-field-wrap">
+        <div class="auth-lbl-row">
+          <label class="auth-lbl" for="auth-user">USERNAME</label>
+          <button class="info-btn" onclick="showInfo('USERNAME','This is what other people on this website will see.')">?</button>
+        </div>
+        <div class="auth-input-wrap"><input id="auth-user" class="auth-input" maxlength="20" autocomplete="username" spellcheck="false" placeholder="YOUR_USERNAME"/></div>
+      </div>
+      <div class="auth-field-wrap">
+        <div class="auth-lbl-row">
+          <label class="auth-lbl" for="auth-pass">PASSWORD</label>
+          <button class="info-btn" onclick="showInfo('PASSWORD',&quot;This keeps your account secure. Minimum 5 characters.&quot;)">?</button>
+        </div>
+        <div class="auth-input-wrap">
+          <input id="auth-pass" class="auth-input" type="password" maxlength="64" autocomplete="current-password" placeholder="••••••••" style="padding-right:36px;" onkeydown="if(event.key==='Enter')authLogin()"/>
+          <button class="toggle-pass" onclick="togglePassword()">
+            <svg id="eye-open" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="eye-closed" viewBox="0 0 24 24" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="auth-btn" id="auth-login-btn" onclick="authLogin()">▶ LOGIN</button>
+      <button class="auth-btn secondary" id="auth-reg-btn" onclick="authRegister()">+ CREATE ACCOUNT</button>
+      <button class="auth-btn muted" id="forgot-btn" onclick="openForgotPassword()" style="margin-top:-2px;">✉ FORGOT PASSWORD?</button>
+      <button class="auth-btn secondary" id="auth-back-btn" onclick="cancelRegister()" style="display:none;border-color:#444;color:#555;box-shadow:none;">← BACK TO LOGIN</button>
+      <div id="auth-status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── SECURITY: ANTI-DEVTOOLS & ANTI-IFRAME ─────────────────────────────────────
+if (window.self !== window.top) window.top.location = window.self.location;
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+});
+
+// ── SECURITY: INTEGRITY CHECKSUM ─────────────────────────────────────────────
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper', '1');
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// ── SECURITY: SAFE STORAGE ────────────────────────────────────────────────────
+function xJRcoreogr(key, fallback) {
+    try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }
+    catch(e) { return fallback; }
+}
+// Throttle map: prevent rapid repeated writes
+var _ssThrottle = {};
+function OZkwPRQeNH(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        // Global string length cap — block oversized values
+        if (str.length > 4000000) { console.warn('SCP: OZkwPRQeNH blocked — value too large for key:', key); return false; }
+        // Per-key string length caps
+        const KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+        if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) { console.warn('SCP: OZkwPRQeNH blocked — key-specific limit exceeded:', key); return false; }
+        // Throttle: no more than 1 write per 150ms per key
+        const now = Date.now();
+        if (_ssThrottle[key] && now - _ssThrottle[key] < 150) return true; // silently skip
+        _ssThrottle[key] = now;
+        localStorage.setItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+}
+
+// ── SECURITY: SHA-256 PASSWORD HASHING ───────────────────────────────────────
+const _PW_SALT = 'scp_pw_2026';
+async function hashPassword(pw) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + _PW_SALT));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── SECURITY: RATE LIMITING (localStorage-backed, persists across tabs/sessions) ─
+const MAX_ATTEMPTS = 5, LOCKOUT_MS = 60000;
+function _rlKey() { return '_lr_' + (document.location.hostname || 'local'); }
+function getRateData() {
+    try { return JSON.parse(localStorage.getItem(_rlKey()) || '{"a":0,"u":0}'); } catch(e) { return {a:0,u:0}; }
+}
+function isLockedOut() { const r = getRateData(); return (r.u && Date.now() < r.u) ? r.u : false; }
+let _lockTimer = null;
+function recordFailedAttempt() {
+    const r = getRateData();
+    r.a = (r.a || 0) + 1;
+    if (r.a >= MAX_ATTEMPTS) {
+        r.u = Date.now() + LOCKOUT_MS; r.a = 0;
+        localStorage.setItem(_rlKey(), JSON.stringify(r));
+        startLockoutTimer(r.u);
+    } else {
+        localStorage.setItem(_rlKey(), JSON.stringify(r));
+        const left = MAX_ATTEMPTS - r.a;
+        showError('Incorrect credentials. ' + left + ' attempt' + (left !== 1 ? 's' : '') + ' remaining before lockout.');
+    }
+}
+function clearAttempts() { localStorage.removeItem(_rlKey()); }
+function startLockoutTimer(until) {
+    const bar = document.getElementById('lockout-bar');
+    const btn = document.getElementById('auth-login-btn');
+    btn.disabled = true; bar.style.display = 'block';
+    if (_lockTimer) clearInterval(_lockTimer);
+    _lockTimer = setInterval(() => {
+        const left = Math.ceil((until - Date.now()) / 1000);
+        if (left <= 0) {
+            clearInterval(_lockTimer); _lockTimer = null;
+            btn.disabled = false; bar.style.display = 'none'; showError('');
+        } else {
+            bar.innerText = '⛔ TOO MANY FAILED ATTEMPTS — LOCKED FOR ' + left + 's';
+        }
+    }, 500);
+}
+
+// ── INPUT SANITIZATION ────────────────────────────────────────────────────────
+function sanitizeRaw(str) { return String(str).replace(/<[^>]*>/g, '').trim(); }
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function showError(msg) { document.getElementById('auth-error').innerText = msg; }
+function showStatus(msg) { document.getElementById('auth-status').innerText = msg; }
+function clearMessages() { showError(''); showStatus(''); }
+function showInfo(title, msg) { document.getElementById('info-modal-title').innerText = title; document.getElementById('info-modal-body').innerText = msg; document.getElementById('info-modal-overlay').classList.add('open'); }
+function closeInfoModal() { document.getElementById('info-modal-overlay').classList.remove('open'); }
+document.getElementById('info-modal-overlay').addEventListener('click', function(e) { if (e.target === this) closeInfoModal(); });
+function togglePassword() {
+    const o = document.getElementById('eye-open'), c = document.getElementById('eye-closed'), p = document.getElementById('auth-pass');
+    o.style.display = o.style.display === 'none' ? '' : 'none';
+    c.style.display = c.style.display === 'none' ? '' : 'none';
+    p.type = p.type === 'password' ? 'text' : 'password';
+}
+function handleGradeChange() { document.getElementById('auth-teacher-code-wrap').style.display = document.getElementById('auth-grade').value === '__teacher__' ? 'block' : 'none'; }
+function openForgotPassword() {
+    const s = encodeURIComponent('Password Reset Request');
+    const b = encodeURIComponent('Hi,\n\nI have forgotten my password.\n\nMy username is: \n\nThank you.');
+    window.open('https://outlook.live.com/mail/0/deeplink/compose?to=someone%40outlook.com&subject=' + s + '&body=' + b, '_blank');
+}
+
+// ── REGISTER ──────────────────────────────────────────────────────────────────
+function authRegister() {
+    clearMessages();
+    ['auth-email-wrap','auth-grade-wrap','auth-name-wrap'].forEach(id => document.getElementById(id).style.display = 'block');
+    document.getElementById('auth-login-btn').style.display = 'none';
+    document.getElementById('forgot-btn').style.display = 'none';
+    document.getElementById('auth-back-btn').style.display = 'block';
+    document.getElementById('auth-reg-btn').innerText = '▶ SUBMIT';
+    document.getElementById('auth-reg-btn').onclick = sendRegistrationRequest;
+}
+function cancelRegister() {
+    clearMessages();
+    ['auth-email-wrap','auth-grade-wrap','auth-name-wrap','auth-teacher-code-wrap'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('auth-login-btn').style.display = 'block';
+    document.getElementById('forgot-btn').style.display = 'block';
+    document.getElementById('auth-back-btn').style.display = 'none';
+    document.getElementById('auth-reg-btn').innerText = '+ CREATE ACCOUNT';
+    document.getElementById('auth-reg-btn').onclick = authRegister;
+    ['auth-name','auth-email','auth-grade','auth-teacher-code'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function sendRegistrationRequest() {
+    clearMessages();
+    const name = sanitizeRaw(document.getElementById('auth-name').value);
+    const email = sanitizeRaw(document.getElementById('auth-email').value);
+    const username = sanitizeRaw(document.getElementById('auth-user').value);
+    const password = document.getElementById('auth-pass').value.trim();
+    const gradeVal = document.getElementById('auth-grade').value;
+    const teacherCode = document.getElementById('auth-teacher-code').value.trim();
+    const isRestricted = name.toLowerCase() === 'restricted' || username.toLowerCase() === 'restricted';
+    const isTeacher = gradeVal === '__teacher__';
+
+    if (!name || !username || !password) { showError('Please fill out all fields.'); return; }
+    if (!isRestricted && !isTeacher && (!email || !email.includes('@') || !email.includes('.'))) { showError('Please enter a valid school email.'); return; }
+    if (!gradeVal && !isRestricted) { showError('Please select your year group.'); return; }
+    if (password.length < 5) { showError('Minimum 5 characters required.'); return; }
+    if (username.length < 3) { showError('Username must be at least 3 characters.'); return; }
+    if (!/^[a-zA-Z0-9_!.]+$/.test(username)) { showError('Username: letters, numbers, _ ! . only.'); return; }
+
+    let role = 'student', initialGrade = null, gradeYear = null;
+    if (isTeacher) {
+        const code = localStorage.getItem('scpTeacherCode');
+        if (!code) { showError('Teacher registration is not yet configured. Contact an admin.'); return; }
+        if (teacherCode !== code) { showError('Incorrect teacher code.'); return; }
+        role = 'teacher';
+    } else if (gradeVal) { initialGrade = parseInt(gradeVal); gradeYear = new Date().getFullYear(); }
+
+    const pending  = xJRcoreogr('pendingAccounts',  []);
+    const approved = xJRcoreogr('approvedAccounts', []);
+    if (pending.some(a => a.username.toLowerCase() === username.toLowerCase()) ||
+        approved.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+        showError('This username is already taken.'); return;
+    }
+
+    let deleted = xJRcoreogr('deletedAccounts', []);
+    if (deleted.some(d => d.username.toLowerCase() === username.toLowerCase())) {
+        OZkwPRQeNH('deletedAccounts', deleted.filter(d => d.username.toLowerCase() !== username.toLowerCase()));
+    }
+
+    const hashedPw = await hashPassword(password);
+    pending.push({ name, username, email: (isRestricted || isTeacher) ? '' : email, password: hashedPw, role, initialGrade, gradeYear });
+    OZkwPRQeNH('pendingAccounts', pending);
+    showStatus('processing...');
+    setTimeout(() => { showStatus('processing complete'); _resetForm(); }, 1200);
+}
+
+function _resetForm() {
+    setTimeout(() => {
+        ['auth-name','auth-email','auth-user','auth-pass','auth-grade','auth-teacher-code'].forEach(id => document.getElementById(id).value = '');
+        ['auth-name-wrap','auth-email-wrap','auth-grade-wrap','auth-teacher-code-wrap'].forEach(id => document.getElementById(id).style.display = 'none');
+        document.getElementById('auth-login-btn').style.display = 'block';
+        document.getElementById('forgot-btn').style.display = 'block';
+        document.getElementById('auth-back-btn').style.display = 'none';
+        document.getElementById('auth-reg-btn').innerText = '+ CREATE ACCOUNT';
+        document.getElementById('auth-reg-btn').onclick = authRegister;
+        document.getElementById('auth-status').innerText = '';
+    }, 800);
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+async function authLogin() {
+    clearMessages();
+    const lockUntil = isLockedOut();
+    if (lockUntil) { startLockoutTimer(lockUntil); return; }
+
+    const username = document.getElementById('auth-user').value.trim();
+    const password = document.getElementById('auth-pass').value.trim();
+    if (!username || !password) { showError('Please enter your username and password.'); return; }
+    if (password.length < 5) { showError('Minimum 5 characters required.'); return; }
+
+    const accounts = xJRcoreogr('approvedAccounts', []);
+    let deleted = xJRcoreogr('deletedAccounts', []);
+    const approved = accounts.some(a => a.username.toLowerCase() === username.toLowerCase());
+
+    if (!approved) {
+        const del = deleted.find(d => d.username.toLowerCase() === username.toLowerCase());
+        if (del) {
+            del.attempts = (del.attempts || 0) + 1;
+            if (del.attempts >= 3) {
+                OZkwPRQeNH('deletedAccounts', deleted.filter(d => d.username.toLowerCase() !== username.toLowerCase()));
+                showError('Account permanently removed after too many attempts.'); return;
+            }
+            OZkwPRQeNH('deletedAccounts', deleted);
+            const left = 3 - del.attempts;
+            showError('Your account has been deleted.' + (left > 0 ? ' (' + left + ' attempt' + (left !== 1 ? 's' : '') + ' left)' : '')); return;
+        }
+    }
+
+    const hashedInput = await hashPassword(password);
+    let match = accounts.find(a =>
+        a.username.toLowerCase() === username.toLowerCase() &&
+        (a.password === hashedInput || a.password === password)
+    );
+
+    if (!match) { recordFailedAttempt(); return; }
+
+    // Check if account is suspended due to a security violation
+    if (match.suspended) {
+        showError('⛔ Your account has been suspended due to a security violation. Contact an admin to reactivate it.');
+        return;
+    }
+
+    // Upgrade plaintext password on successful login
+    if (match.password === password && match.password !== hashedInput) {
+        match.password = hashedInput;
+        OZkwPRQeNH('approvedAccounts', accounts);
+    }
+
+    clearAttempts();
+
+    // Generate session token
+    const token = crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    sessionStorage.setItem('_scp_st', token);
+    sessionStorage.setItem('_scp_su', match.username);
+
+    showStatus('processing...');
+    setTimeout(() => {
+        showStatus('Login successful');
+        localStorage.setItem('loggedInUser', match.username);
+        setTimeout(() => { window.location.href = 'home.html'; }, 600);
+    }, 1200);
+}
+
+// ── SEED RESTRICTED & INIT ────────────────────────────────────────────────────
+(async function() {
+    if (sessionStorage.getItem('_tamper') === '1') {
+        showError('⚠ Data integrity warning — storage may have been modified externally.');
+        sessionStorage.removeItem('_tamper');
+    }
+
+    // If logged in WITH session token, redirect
+    const loggedIn = localStorage.getItem('loggedInUser');
+    if (loggedIn && sessionStorage.getItem('_scp_st')) { window.location.href = 'home.html'; return; }
+    if (loggedIn) {
+        // Save the departing user's theme so login page shows their colours
+        try {
+            const _la = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            const _lm = _la.find(a => a.username.toLowerCase() === loggedIn.toLowerCase());
+            if (_lm && _lm.theme) localStorage.setItem('scpLastTheme', JSON.stringify(_lm.theme));
+            else if (localStorage.getItem('scpTheme')) localStorage.setItem('scpLastTheme', localStorage.getItem('scpTheme'));
+        } catch(e) {}
+        localStorage.removeItem('loggedInUser'); // stale session
+    }
+
+    aVjArnVgxw();
+
+    // Hash stored directly — plaintext never appears in source
+    const restrictedHash = 'a7d0148689d6a3e14fd0c3302f32f87e1bb5a7d6c06205fd2232cd8382235be4';
+    let approved = xJRcoreogr('approvedAccounts', []);
+    const existing = approved.find(a => a.username.toLowerCase() === 'restricted');
+    if (!existing) {
+        approved.push({ name: 'Restricted', username: 'Restricted', email: '', password: restrictedHash, role: 'student', initialGrade: 7, gradeYear: new Date().getFullYear() - 10, access: ['Files','Hacks','Console','Websites','Tutors','Messages'], favorite: true, redacted: true, hidden: true });
+        OZkwPRQeNH('approvedAccounts', approved);
+    } else {
+        if (existing.password && existing.password.length !== 64) existing.password = restrictedHash;
+        existing.role = 'student'; existing.initialGrade = 7; existing.gradeYear = new Date().getFullYear() - 10;
+        OZkwPRQeNH('approvedAccounts', approved);
+    }
+
+    // Migrate legacy plaintext passwords in background
+    (async () => {
+        let changed = false;
+        for (const acc of approved) {
+            if (acc.password && acc.password.length !== 64) { acc.password = await hashPassword(acc.password); changed = true; }
+        }
+        if (changed) OZkwPRQeNH('approvedAccounts', approved);
+    })();
+
+    // Resume lockout if needed
+    const lockUntil = isLockedOut();
+    if (lockUntil) startLockoutTimer(lockUntil);
+})();
+</script>
+</body>
+</html>

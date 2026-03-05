@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles.css">
+<style>#main { display: flex; flex: 1; overflow: hidden; background: var(--scp-bg, #000);
+        background: var(--scp-bg, #000);}
+    #sidebar { width: 180px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #sidebar-label { padding: 14px 16px 10px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); }
+    .sidebar-tab { padding: 13px 16px; background: transparent; border: none; border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); color: var(--scp-green); font-size: 11px; letter-spacing: 1.5px; cursor: pointer; text-align: left; transition: 0.15s; opacity: 0.55; width: 100%; }
+    .sidebar-tab:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); opacity: 1; }
+    .sidebar-tab.active { opacity: 1; background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); border-left: 3px solid var(--scp-green); }
+
+    #content-area { flex: 1; overflow-y: auto; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; background: var(--scp-bg, #000); }
+
+    /* Section header — flex so title, search, and add button line up */
+    .section-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid var(--scp-green);
+        padding-bottom: 10px;
+        flex-wrap: wrap;
+    }
+    .section-title { font-size: 14px; letter-spacing: 4px; text-shadow: 0 0 6px var(--scp-green); flex-shrink: 0; }
+
+    /* Universal search bar for all tabs */
+    #tab-search {
+        flex: 1;
+        padding: 5px 10px;
+        background: var(--scp-bg, #000);
+        border: 1px solid color-mix(in srgb, var(--scp-green) 40%, transparent);
+        color: var(--scp-green);
+        font-size: 11px;
+        outline: none;
+        letter-spacing: 1px;
+        max-width: 220px;
+    }
+    #tab-search::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    #tab-search:focus { border-color: var(--scp-green); }
+
+    .add-btn { padding: 6px 14px; background: transparent; border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 10px; letter-spacing: 2px; cursor: pointer; transition: 0.15s; flex-shrink: 0; }
+    .add-btn:hover { background: var(--scp-green); color: #000; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .card { border: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); background: var(--scp-bg, #000); padding: 16px; display: flex; flex-direction: column; gap: 8px; transition: 0.15s; position: relative; }
+    .card:hover { border-color: var(--scp-green); box-shadow: 0 0 8px color-mix(in srgb, var(--scp-green) 8%, transparent); }
+    .card-title { font-size: 13px; letter-spacing: 1px; color: var(--scp-green); padding-right: 20px; }
+    .card-desc { font-size: 11px; color: var(--scp-gray); line-height: 1.5; flex: 1; }
+    .card-footer { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+    .card-link { padding: 6px 12px; background: var(--scp-green); color: #000; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-decoration: none; cursor: pointer; transition: 0.15s; display: inline-block; border: none; font-family: Arial, sans-serif; }
+    .card-link:hover { background: var(--scp-green); }
+    .card-del { position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: #333; font-size: 14px; cursor: pointer; transition: 0.15s; }
+    .card-del:hover { color: var(--scp-red); }
+    .card-tag { font-size: 9px; padding: 2px 6px; border-radius: 8px; letter-spacing: 1px; }
+    .tag-web  { border: 1px solid var(--scp-green); color: var(--scp-green); }
+    .tag-game { border: 1px solid var(--scp-gold);  color: var(--scp-gold); }
+    .empty-msg { font-size: 11px; color: var(--scp-gray); letter-spacing: 1px; padding: 20px 0; }
+    .code-snippet { background: var(--scp-bg, #000); border: 1px solid color-mix(in srgb, var(--scp-green) 40%, transparent); padding: 7px 10px; font-family: monospace; font-size: 10px; color: #4a8a4a; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 55px; overflow: hidden; }
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { border: 2px solid var(--scp-green); background: #000; box-shadow: 0 0 20px var(--scp-green); padding: 26px 30px; width: 380px; display: flex; flex-direction: column; gap: 13px; max-height: 90vh; overflow-y: auto; }
+    .modal-box.red-border { border-color: var(--scp-red); box-shadow: 0 0 20px var(--scp-red); }
+    .modal-title { font-size: 13px; letter-spacing: 3px; }
+    .modal-title.red { color: var(--scp-red); }
+    .modal-lbl { font-size: 10px; letter-spacing: 1.5px; color: var(--scp-green-soft); }
+    .modal-body { font-size: 12px; color: var(--scp-green-soft); line-height: 1.6; }
+    .modal-input { width: 100%; padding: 10px 12px; background: var(--scp-bg, #000); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; outline: none; font-family: Arial, sans-serif; }
+    .modal-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    .modal-textarea { width: 100%; padding: 10px 12px; background: var(--scp-bg, #000); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 12px; outline: none; font-family: monospace; resize: vertical; min-height: 70px; }
+    .modal-error { color: var(--scp-red); font-size: 11px; min-height: 14px; }
+    .modal-btn { padding: 10px; font-size: 11px; font-weight: bold; letter-spacing: 2px; cursor: pointer; border: none; font-family: Arial, sans-serif; transition: 0.15s; }
+    .modal-btn.primary { background: var(--scp-green); color: #000; }
+    .modal-btn.primary:hover { background: var(--scp-green); }
+    .modal-btn.secondary { background: transparent; border: 1px solid var(--scp-green); color: var(--scp-green); opacity: 0.6; }
+    .modal-btn.secondary:hover { opacity: 1; }
+    .modal-btn.del { background: var(--scp-red); color: #000; }
+    .modal-btn.del:hover { background: #ff6f6f; }
+
+    .long-overflow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+</style>
+<script>
+/* scpTheme-apply — apply saved theme before paint */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){
+        document.documentElement.style.setProperty('--scp-bg',t.bg);
+        document.documentElement.style.backgroundColor=t.bg;
+    }
+    if(t.accent){
+        document.documentElement.style.setProperty('--scp-green',t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft',t.accent);
+        var hex=t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text',lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+(function(){
+    // Valid access values only
+    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
+    var VALID_ROLES = ['student','teacher'];
+
+    function _guardRole() {
+        try {
+            var user = localStorage.getItem('loggedInUser');
+            if (!user) return;
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+            if (!me) return;
+
+            var changed = false;
+
+            // Strip any invalid role
+            if (!VALID_ROLES.includes(me.role)) {
+                // Illegal role — strip admin-like access
+                me.role = 'student';
+                changed = true;
+            }
+
+            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
+            if (me.access && !me.username.toLowerCase().includes('restricted')) {
+                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
+                if (filteredAccess.length !== me.access.length) {
+                    me.access = filteredAccess;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                // Update integrity
+                try {
+                    var d = localStorage.getItem('approvedAccounts') || '[]';
+                    var h = 5381;
+                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                    localStorage.setItem('_ic', (h >>> 0).toString(36));
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _guardRole);
+    } else {
+        _guardRole();
+    }
+})();
+</script>
+
+<script>
+// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
+(function(){
+    var user = localStorage.getItem('loggedInUser');
+    if (!user) return;
+    try {
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (me && me.suspended) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            // Recheck integrity immediately when this key changes from outside
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">WEBSITES</div>
+    <div id="header-sub">// PROTECTED WEBSITE //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn active">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* lookup-nav-show-injected */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isT=me&&me.role==='teacher';
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isT||isA||isR){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+
+<script>
+/* admin-nav-show */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+</div>
+
+<div id="main">
+    <div id="sidebar">
+        <div id="sidebar-label">CATEGORY</div>
+        <button class="sidebar-tab" id="tab-websites" onclick="switchTab('websites')">🌐 WEBSITES</button>
+        <button class="sidebar-tab" id="tab-games"    onclick="switchTab('games')">🎮 GAMES</button>
+        <button class="sidebar-tab" id="tab-hacks"    onclick="switchTab('hacks')" style="display:none;">🔓 HACKS</button>
+    </div>
+
+    <div id="content-area">
+        <div class="section-head">
+            <div class="section-title" id="section-title">WEBSITES</div>
+            <!-- Search bar — visible on all tabs -->
+            <input id="tab-search" placeholder="🔍 SEARCH..." oninput="onSearchInput()"/>
+            <button class="add-btn" id="add-btn" onclick="openAddModal()">+ ADD</button>
+        </div>
+        <div class="card-grid" id="card-grid"></div>
+    </div>
+</div>
+
+<!-- ADD WEBSITE / GAME MODAL -->
+<div class="modal-overlay" id="add-modal">
+    <div class="modal-box">
+        <div class="modal-title" id="add-modal-title">ADD ENTRY</div>
+        <div class="modal-lbl">TITLE</div>
+        <input class="modal-input" id="add-title" placeholder="Name" maxlength="60"/>
+        <div class="modal-lbl">URL</div>
+        <input class="modal-input" id="add-url" placeholder="https://..." maxlength="200"/>
+        <div class="modal-lbl">DESCRIPTION</div>
+        <input class="modal-input" id="add-desc" placeholder="Short description..." maxlength="120"/>
+        <div class="modal-error" id="add-error"></div>
+        <button class="modal-btn primary" onclick="submitAdd()">▶ ADD</button>
+        <button class="modal-btn secondary" onclick="closeModal('add-modal')">CANCEL</button>
+    </div>
+</div>
+
+<!-- ADD HACK MODAL -->
+<div class="modal-overlay" id="add-hack-modal">
+    <div class="modal-box">
+        <div class="modal-title">ADD HACK</div>
+        <div class="modal-lbl">TITLE</div>
+        <input class="modal-input" id="hack-title" placeholder="e.g. Blooket Auto-Answer" maxlength="80"/>
+        <div class="modal-lbl">CATEGORY</div>
+        <select class="modal-input" id="hack-category" style="cursor:pointer;background:#050505;">
+            <option value="blooket">🟦 Blooket</option>
+            <option value="kahoot">📍 Kahoot</option>
+            <option value="gimkit">💰 Gimkit</option>
+            <option value="quizlet">📖 Quizlet</option>
+            <option value="other">🔧 Other</option>
+        </select>
+        <div class="modal-lbl">DESCRIPTION / HOW TO USE</div>
+        <textarea class="modal-textarea" id="hack-desc" placeholder="Describe what this does and how to use it..." rows="3"></textarea>
+        <div class="modal-lbl">CODE / SCRIPT (optional)</div>
+        <textarea class="modal-textarea" id="hack-code" placeholder="Paste code here..." rows="4" style="font-family:monospace;font-size:11px;"></textarea>
+        <div class="modal-error" id="hack-error"></div>
+        <button class="modal-btn primary" onclick="submitHack()">▶ ADD HACK</button>
+        <button class="modal-btn secondary" onclick="closeModal('add-hack-modal')">CANCEL</button>
+    </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+    <div class="modal-box red-border">
+        <div class="modal-title red">⚠ CONFIRM DELETE</div>
+        <div class="modal-body" id="confirm-body"></div>
+        <button class="modal-btn del" onclick="confirmYes()" style="margin-top:6px;">✕ YES, DELETE</button>
+        <button class="modal-btn secondary" onclick="closeModal('confirm-modal')">CANCEL</button>
+    </div>
+</div>
+
+<script>
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/`/g, '&#x60;');
+}
+
+function getWebsites() { return JSON.parse(localStorage.getItem('scpWebsites')) || []; }
+function saveWebsites(w) { localStorage.setItem('scpWebsites', JSON.stringify(w)); }
+function getHacks() { return JSON.parse(localStorage.getItem('scpHacks')) || []; }
+function saveHacks(h) { localStorage.setItem('scpHacks', JSON.stringify(h)); }
+
+let currentUser = '', currentUserData = null, isAdmin = false, isTeacher = false;
+let activeTab = 'websites', pendingConfirm = null;
+
+const CAT_COLORS = { blooket:'#4488ff', kahoot:'#ff3399', gimkit:'#ffcc00', quizlet:'#3fbf3f', other:'#888' };
+const CAT_LABELS = { blooket:'🟦 BLOOKET', kahoot:'📍 KAHOOT', gimkit:'💰 GIMKIT', quizlet:'📖 QUIZLET', other:'🔧 OTHER' };
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function openConfirm(msg, fn) { pendingConfirm = fn; document.getElementById('confirm-body').innerText = msg; openModal('confirm-modal'); }
+function confirmYes() { closeModal('confirm-modal'); if (pendingConfirm) pendingConfirm(); pendingConfirm = null; }
+
+// ── TABS ───────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+    activeTab = tab;
+    ['websites','games','hacks'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.classList.toggle('active', t === tab);
+    });
+    document.getElementById('section-title').innerText = {websites:'WEBSITES', games:'GAMES', hacks:'HACKS'}[tab];
+
+    // Reset search on tab switch
+    document.getElementById('tab-search').value = '';
+    const placeholder = { websites:'🔍 SEARCH WEBSITES...', games:'🔍 SEARCH GAMES...', hacks:'🔍 SEARCH HACKS...' };
+    document.getElementById('tab-search').placeholder = placeholder[tab] || '🔍 SEARCH...';
+
+    // Who can add?
+    let canAdd = false;
+    if (tab === 'hacks')    canAdd = !isTeacher || isAdmin;
+    if (tab === 'websites') canAdd = isAdmin || isTeacher;
+    if (tab === 'games')    canAdd = isAdmin;
+    const addBtn = document.getElementById('add-btn');
+    addBtn.style.display = canAdd ? 'block' : 'none';
+    addBtn.onclick = tab === 'hacks' ? openAddHackModal : openAddModal;
+
+    tab === 'hacks' ? renderHacks() : renderCards();
+}
+
+function onSearchInput() {
+    activeTab === 'hacks' ? renderHacks() : renderCards();
+}
+
+// ── WEBSITES / GAMES ───────────────────────────────────────────────────────────
+function renderCards() {
+    const query = (document.getElementById('tab-search').value || '').toLowerCase().trim();
+    const typeKey = activeTab === 'games' ? 'game' : 'website';
+    let all = getWebsites().filter(w => w.type === typeKey);
+    if (query) all = all.filter(w =>
+        (w.title||'').toLowerCase().includes(query) ||
+        (w.description||'').toLowerCase().includes(query)
+    );
+    const grid = document.getElementById('card-grid');
+    if (!all.length) { grid.innerHTML = `<div class="empty-msg">${query ? '// NO RESULTS //' : '// NOTHING HERE YET //'}</div>`; return; }
+    grid.innerHTML = '';
+    all.forEach(w => {
+        const canDel = isAdmin || (isTeacher && w.addedBy && w.addedBy.toLowerCase() === currentUser.toLowerCase());
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+            ${canDel ? `<button class="card-del" onclick="deleteEntry('${w.id}')">✕</button>` : ''}
+            <div class="card-title">${escapeHtml(w.title)}</div>
+            <div class="card-desc">${escapeHtml(w.description || '')}</div>
+            <div class="card-footer">
+                <a class="card-link" href="${(w.url||'#').startsWith('http')?escapeHtml(w.url):'#'}" target="_blank" rel="noopener">▶ OPEN</a>
+                <span class="card-tag ${w.type === 'game' ? 'tag-game' : 'tag-web'}">${w.type === 'game' ? '🎮 GAME' : '🌐 SITE'}</span>
+            </div>`;
+        grid.appendChild(div);
+    });
+}
+
+function openAddModal() {
+    document.getElementById('add-modal-title').innerText = activeTab === 'games' ? 'ADD GAME' : 'ADD WEBSITE';
+    ['add-title','add-url','add-desc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('add-error').innerText = '';
+    openModal('add-modal');
+    setTimeout(() => document.getElementById('add-title').focus(), 80);
+}
+
+function submitAdd() {
+    const title = document.getElementById('add-title').value.trim();
+    const url   = document.getElementById('add-url').value.trim();
+    const desc  = document.getElementById('add-desc').value.trim();
+    if (!title || !url) { document.getElementById('add-error').innerText = 'Title and URL are required.'; return; }
+    if (!url.startsWith('http')) { document.getElementById('add-error').innerText = 'URL must start with http/https.'; return; }
+    const items = getWebsites();
+    items.push({ id: Date.now().toString(), title, url, description: desc, type: activeTab === 'games' ? 'game' : 'website', addedBy: currentUser, addedAt: Date.now() });
+    saveWebsites(items);
+    closeModal('add-modal');
+    renderCards();
+}
+
+function deleteEntry(id) {
+    const w = getWebsites().find(x => x.id === id);
+    openConfirm(`This will remove "${w ? w.title : 'this entry'}" from the list. The actual website is not affected.`, () => {
+        saveWebsites(getWebsites().filter(x => x.id !== id));
+        renderCards();
+    });
+}
+
+// ── HACKS ──────────────────────────────────────────────────────────────────────
+function renderHacks() {
+    const query = (document.getElementById('tab-search').value || '').toLowerCase().trim();
+    let all = getHacks().sort((a, b) => b.addedAt - a.addedAt);
+    if (query) {
+        all = all.filter(h =>
+            h.title.toLowerCase().includes(query) ||
+            (h.description || '').toLowerCase().includes(query) ||
+            (h.category || '').toLowerCase().includes(query)
+        );
+    }
+    const grid = document.getElementById('card-grid');
+    if (!all.length) {
+        grid.innerHTML = `<div class="empty-msg">${query ? '// NO HACKS MATCH YOUR SEARCH //' : '// NO HACKS ADDED YET //'}</div>`;
+        return;
+    }
+    grid.innerHTML = '';
+    all.forEach(h => {
+        const canDel = isAdmin || (h.addedBy && h.addedBy.toLowerCase() === currentUser.toLowerCase());
+        const color  = CAT_COLORS[h.category] || '#888';
+        const label  = CAT_LABELS[h.category]  || h.category.toUpperCase();
+        const div = document.createElement('div');
+        div.className = 'card';
+        const codeEscaped = h.code ? h.code.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+        const snippet = h.code ? `<div class="code-snippet">${codeEscaped.substring(0,150)}${h.code.length>150?'...':''}</div>` : '';
+        const copyBtn = h.code ? `<button class="card-link" onclick="copyHackCode(event,'${h.id}')">📋 COPY CODE</button>` : '';
+        div.innerHTML = `
+            ${canDel ? `<button class="card-del" onclick="deleteHack('${h.id}')">✕</button>` : ''}
+            <div class="card-title">${escapeHtml(h.title)}</div>
+            <span class="card-tag" style="border-color:${color};color:${color};width:fit-content;">${label}</span>
+            <div class="card-desc">${escapeHtml(h.description || '')}</div>
+            ${snippet}
+            <div class="card-footer">${copyBtn}</div>`;
+        grid.appendChild(div);
+    });
+}
+
+function openAddHackModal() {
+    ['hack-title','hack-desc','hack-code'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('hack-error').innerText = '';
+    openModal('add-hack-modal');
+    setTimeout(() => document.getElementById('hack-title').focus(), 80);
+}
+
+function submitHack() {
+    const title = document.getElementById('hack-title').value.trim();
+    const cat   = document.getElementById('hack-category').value;
+    const desc  = document.getElementById('hack-desc').value.trim();
+    const code  = document.getElementById('hack-code').value.trim();
+    if (!title) { document.getElementById('hack-error').innerText = 'Title is required.'; return; }
+    if (!desc)  { document.getElementById('hack-error').innerText = 'Description is required.'; return; }
+    const hacks = getHacks();
+    hacks.push({ id: Date.now().toString(), title, category: cat, description: desc, code, addedBy: currentUser, addedAt: Date.now() });
+    saveHacks(hacks);
+    closeModal('add-hack-modal');
+    renderHacks();
+}
+
+function deleteHack(id) {
+    const h = getHacks().find(x => x.id === id);
+    openConfirm(`This will permanently delete "${h ? h.title : 'this hack'}" and all its code. This cannot be undone.`, () => {
+        saveHacks(getHacks().filter(x => x.id !== id));
+        renderHacks();
+    });
+}
+
+function copyHackCode(evt, id) {
+    const h = getHacks().find(x => x.id === id);
+    if (!h || !h.code) return;
+    navigator.clipboard.writeText(h.code).then(() => {
+        const btn = evt.target;
+        const orig = btn.innerText;
+        btn.innerText = '✓ COPIED!';
+        setTimeout(() => btn.innerText = orig, 1500);
+    });
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+window.onload = function () {
+    const username = localStorage.getItem('loggedInUser');
+    if (!username) { window.location.href = 'Index.html'; return; }
+    currentUser = username;
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    currentUserData = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+    if (!currentUserData || !Array.isArray(currentUserData.access) || !currentUserData.access.includes('Websites')) {
+        document.getElementById('main').innerHTML = '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
+        return;
+    }
+    isAdmin   = currentUserData.access.includes('Admin');
+    isTeacher = currentUserData.role === 'teacher';
+    if (!isTeacher || isAdmin) document.getElementById('tab-hacks').style.display = '';
+    if (isTeacher && !isAdmin) document.getElementById('tab-games').style.display = 'none';
+    // Set first tab active based on role
+    const firstTab = document.querySelector('.sidebar-tab:not([style*="display:none"])');
+    if (firstTab) firstTab.click();
+    switchTab('websites');
+};
+</script>
+
+<script>
+/* scpTheme-postload */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(!t.bg && !t.accent) return;
+    function applyEl(id){ var el=document.getElementById(id); if(el&&t.bg) el.style.backgroundColor=t.bg; }
+    function run(){ applyEl('header'); applyEl('navbar'); if(t.bg) document.body.style.backgroundColor=t.bg; }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
+    else run();
+})();
+
+// ── DEBOUNCE UTILITY ──────────────────────────────────────────────────────────
+function _debounce(fn, delay) {
+    var timer;
+    return function() {
+        var args = arguments, ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+}
+
+function sanitizeUrl(url) {
+    url = String(url).trim();
+    // Only allow http/https URLs
+    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+    // Block javascript: protocol injection
+    if (/^javascript:/i.test(url)) return '';
+    return url.slice(0, 500);
+}
+function sanitizeInput(str) {
+    return String(str).replace(/[<>"'`]/g, '').trim().slice(0, 200);
+}
+</script>
+</body>
+</html>

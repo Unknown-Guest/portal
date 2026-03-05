@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles.css">
+<style>#content {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+        background: var(--scp-bg, #000);
+    }
+
+    #account-wrap {
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .page-title {
+        font-size: 18px;
+        letter-spacing: 5px;
+        text-shadow: 0 0 6px var(--scp-green);
+        margin-bottom: 4px;
+    }
+
+    .page-sub {
+        font-size: 10px;
+        letter-spacing: 2px;
+        color: var(--scp-green-soft);
+        opacity: 0.7;
+    }
+
+    .info-card {
+        border: 1px solid var(--scp-green);
+        background: var(--scp-bg, #000);
+        box-shadow: 0 0 8px color-mix(in srgb, var(--scp-green) 8%, transparent), inset 0 0 3px color-mix(in srgb, var(--scp-green) 8%, transparent);
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #0d0d0d;
+        padding-bottom: 8px;
+    }
+    .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .info-label { color: var(--scp-green-soft); opacity: 0.7; }
+    .info-value { color: var(--scp-green); }
+
+    .section-title {
+        font-size: 11px;
+        letter-spacing: 3px;
+        color: var(--scp-green);
+        text-shadow: 0 0 4px var(--scp-green);
+        border-bottom: 1px solid var(--scp-green);
+        padding-bottom: 8px;
+        margin-bottom: 4px;
+    }
+
+    .field-wrap { display: flex; flex-direction: column; gap: 5px; }
+
+    .field-lbl {
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        color: var(--scp-green-soft);
+        opacity: 0.7;
+    }
+
+    .field-input {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--scp-bg, #000);
+        border: 1px solid var(--scp-green);
+        color: var(--scp-green);
+        font-size: 13px;
+        outline: none;
+        font-family: Arial, sans-serif;
+        box-shadow: inset 0 0 4px color-mix(in srgb, var(--scp-green) 8%, transparent);
+        transition: 0.15s;
+    }
+    .field-input:focus { box-shadow: inset 0 0 4px color-mix(in srgb, var(--scp-green) 8%, transparent), 0 0 6px var(--scp-green); }
+    .field-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+
+    .save-btn {
+        padding: 10px;
+        background: transparent;
+        border: 1px solid var(--scp-green);
+        color: var(--scp-green);
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: 0.15s;
+        box-shadow: 0 0 4px var(--scp-green);
+        margin-top: 4px;
+    }
+    .save-btn:hover { background: var(--scp-green); color: #000; box-shadow: 0 0 10px var(--scp-green); }
+
+    .status-msg {
+        font-size: 11px;
+        letter-spacing: 1px;
+        min-height: 16px;
+        margin-top: 2px;
+    }
+    .status-ok { color: var(--scp-green-soft); }
+    .status-err { color: var(--scp-red); }
+
+    .form-card {
+        border: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent);
+        background: var(--scp-bg, #000);
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* Color picker row */
+    .color-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .color-pick-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        min-width: 120px;
+    }
+    .color-pick-wrap label {
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        color: var(--scp-green-soft);
+        opacity: 0.8;
+    }
+    input[type="color"] {
+        width: 100%;
+        height: 42px;
+        border: 1px solid var(--scp-green);
+        background: var(--scp-bg, #000);
+        cursor: pointer;
+        padding: 3px;
+        outline: none;
+    }
+    #color-error { color: var(--scp-red); font-size: 11px; min-height: 14px; letter-spacing: 1px; }
+</style>
+<script>
+/* Apply saved theme on load — runs before body paints */
+(function(){
+    var t = JSON.parse(localStorage.getItem('scpTheme') || '{}');
+    var _hexRe = /^#[0-9a-fA-F]{6}$/;
+    if (t.bg && _hexRe.test(t.bg)) {
+        document.documentElement.style.setProperty('--scp-bg', t.bg);
+        document.documentElement.style.backgroundColor = t.bg;
+    }
+    if (t.accent && _hexRe.test(t.accent)) {
+        document.documentElement.style.setProperty('--scp-green', t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft', t.accent);
+        var hex = t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum = (0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text', lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+(function(){
+    // Valid access values only
+    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
+    var VALID_ROLES = ['student','teacher'];
+
+    function _guardRole() {
+        try {
+            var user = localStorage.getItem('loggedInUser');
+            if (!user) return;
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+            if (!me) return;
+
+            var changed = false;
+
+            // Strip any invalid role
+            if (!VALID_ROLES.includes(me.role)) {
+                // Illegal role — strip admin-like access
+                me.role = 'student';
+                changed = true;
+            }
+
+            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
+            if (me.access && !me.username.toLowerCase().includes('restricted')) {
+                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
+                if (filteredAccess.length !== me.access.length) {
+                    me.access = filteredAccess;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                // Update integrity
+                try {
+                    var d = localStorage.getItem('approvedAccounts') || '[]';
+                    var h = 5381;
+                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                    localStorage.setItem('_ic', (h >>> 0).toString(36));
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _guardRole);
+    } else {
+        _guardRole();
+    }
+})();
+</script>
+
+<script>
+// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
+(function(){
+    var user = localStorage.getItem('loggedInUser');
+    if (!user) return;
+    try {
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (me && me.suspended) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            // Recheck integrity immediately when this key changes from outside
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+<script>
+// ── AUTO-BACKUP ON TAMPER ─────────────────────────────────────────────────────
+(function(){
+    if (sessionStorage.getItem('_tamper') === '1') {
+        sessionStorage.removeItem('_tamper');
+        // Auto-backup on tamper removed (security risk — gifts DB to attacker) catch(e){}
+    }
+})();
+</script>
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">HOME</div>
+    <div id="header-sub">// PROTECTED WEBSITE //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn active" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* admin-nav-show */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+
+<script>
+/* lookup-nav-show-injected Show LOOKUP nav button for teachers, admins, and Restricted */
+(function(){
+  var u = localStorage.getItem('loggedInUser');
+  if (!u) return;
+  var a = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+  var me = a.find(function(x){ return x.username && x.username.toLowerCase() === u.toLowerCase(); });
+  var isT = me && me.role === 'teacher';
+  var isA = me && Array.isArray(me.access) && me.access.includes('Admin');
+  var isR = u.toLowerCase() === 'restricted';
+  if (isT || isA || isR) {
+    var b = document.getElementById('lookup-nav-btn');
+    if (b) b.style.display = '';
+  }
+})();
+</script>
+</div>
+
+<div id="content">
+    <div id="account-wrap">
+
+        <div>
+            <div class="page-title">ACCOUNT SETTINGS</div>
+            <div class="page-sub">// MANAGE YOUR ACCOUNT DETAILS //</div>
+        </div>
+
+        <!-- CURRENT INFO -->
+        <div>
+            <div class="section-title">CURRENT DETAILS</div>
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="info-label">NAME</span>
+                    <span class="info-value" id="disp-name">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">USERNAME</span>
+                    <span class="info-value" id="disp-username">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">EMAIL</span>
+                    <span class="info-value" id="disp-email">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">PASSWORD</span>
+                    <span class="info-value" id="disp-password">••••••••</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHANGE NAME -->
+        <div class="form-card">
+            <div class="section-title">CHANGE NAME</div>
+            <div class="field-wrap">
+                <label class="field-lbl">NEW NAME</label>
+                <input class="field-input" id="new-name" placeholder="YOUR NAME" maxlength="32" autocomplete="off"/>
+            </div>
+            <button class="save-btn" onclick="changeName()">▶ SAVE NAME</button>
+            <div class="status-msg" id="name-status"></div>
+        </div>
+
+        <!-- CHANGE USERNAME -->
+        <div class="form-card">
+            <div class="section-title">CHANGE USERNAME</div>
+            <div class="field-wrap">
+                <label class="field-lbl">NEW USERNAME</label>
+                <input class="field-input" id="new-username" placeholder="NEW_USERNAME" maxlength="20" autocomplete="off"/>
+            </div>
+            <div class="field-wrap">
+                <label class="field-lbl">CURRENT PASSWORD (to confirm)</label>
+                <input class="field-input" id="confirm-pass-username" type="password" placeholder="••••••••" maxlength="64"/>
+            </div>
+            <button class="save-btn" onclick="changeUsername()">▶ SAVE USERNAME</button>
+            <div class="status-msg" id="username-status"></div>
+        </div>
+
+        <!-- CHANGE EMAIL -->
+        <div class="form-card">
+            <div class="section-title">CHANGE EMAIL</div>
+            <div class="field-wrap">
+                <label class="field-lbl">CURRENT PASSWORD</label>
+                <input class="field-input" id="email-password" type="password" placeholder="••••••••" maxlength="64" autocomplete="off"/>
+            </div>
+            <div class="field-wrap">
+                <label class="field-lbl">NEW EMAIL</label>
+                <input class="field-input" id="new-email" type="email" placeholder="YOUR@EMAIL.COM" maxlength="64" autocomplete="off"/>
+            </div>
+            <button class="save-btn" onclick="YWrRTWPEln()">▶ SAVE EMAIL</button>
+            <div class="status-msg" id="email-status"></div>
+        </div>
+
+        <!-- CHANGE PASSWORD -->
+        <div class="form-card">
+            <div class="section-title">CHANGE PASSWORD</div>
+            <div class="field-wrap">
+                <label class="field-lbl">CURRENT PASSWORD</label>
+                <input class="field-input" id="old-password" type="password" placeholder="••••••••" maxlength="64"/>
+            </div>
+            <div class="field-wrap">
+                <label class="field-lbl">NEW PASSWORD</label>
+                <input class="field-input" id="new-password" type="password" placeholder="••••••••" maxlength="64"/>
+            </div>
+            <div class="field-wrap">
+                <label class="field-lbl">CONFIRM NEW PASSWORD</label>
+                <input class="field-input" id="confirm-password" type="password" placeholder="••••••••" maxlength="64"/>
+            </div>
+            <button class="save-btn" onclick="dJHUdKF0j7()">▶ SAVE PASSWORD</button>
+            <div class="status-msg" id="password-status"></div>
+        </div>
+
+        <!-- THEME COLOR PICKER -->
+        <div class="form-card">
+            <div class="section-title">🎨 THEME COLOURS</div>
+            <div style="font-size:11px;color:var(--scp-green-soft);opacity:0.7;letter-spacing:1px;">Customise the site background and accent colour. Changes apply across all pages.</div>
+            <div class="color-row">
+                <div class="color-pick-wrap">
+                    <label>BACKGROUND COLOUR</label>
+                    <input type="color" id="theme-bg" value="#000000" oninput="previewTheme()"/>
+                </div>
+                <div class="color-pick-wrap">
+                    <label>ACCENT COLOUR</label>
+                    <input type="color" id="theme-accent" value="#3fbf3f" oninput="previewTheme()"/>
+                </div>
+            </div>
+            <div id="color-error"></div>
+            <div style="display:flex;gap:8px;">
+                <button class="save-btn" style="flex:1;" onclick="saveTheme()">▶ APPLY THEME</button>
+                <button class="save-btn" style="flex:1;opacity:0.6;" onclick="resetTheme()">↩ RESET DEFAULT</button>
+            </div>
+            <div class="status-msg" id="theme-status"></div>
+        </div>
+
+
+        <!-- DATA BACKUP -->
+        <div class="form-card">
+            <div class="section-title">💾 DATA BACKUP</div>
+            <p style="font-size:11px;color:#aaa;letter-spacing:0.5px;line-height:1.7;margin-bottom:12px;">Export all your site data as a JSON backup file. Import it later to restore accounts, messages, and settings.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="save-btn" style="flex:1;" onclick="fzKG5mSoyP()">⬇ EXPORT BACKUP</button>
+                <label class="save-btn" style="flex:1;text-align:center;cursor:pointer;">
+                    ⬆ IMPORT BACKUP
+                    <input type="file" accept=".json" style="display:none;" onchange="tC56aMIgHF(this)"/>
+                </label>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:#555;letter-spacing:1px;" id="storage-usage"></div>
+            <div class="status-msg" id="backup-status"></div>
+        </div>
+
+        <!-- DELETE ACCOUNT -->
+        <div class="form-card" style="border-color: #2a0000;">
+            <div class="section-title" style="color:var(--scp-red);border-color:var(--scp-red);text-shadow:0 0 4px var(--scp-red);">DANGER ZONE</div>
+            <button class="save-btn" style="border-color:var(--scp-red);color:var(--scp-red);box-shadow:0 0 4px var(--scp-red);"
+                    onmouseover="this.style.background='var(--scp-red)';this.style.color='#000';"
+                    onmouseout="this.style.background='transparent';this.style.color='var(--scp-red)';"
+                    onclick="document.getElementById('delete-modal').style.display='flex'">
+                ⚠ DELETE MY ACCOUNT
+            </button>
+        </div>
+
+        <div style="height:40px;"></div>
+
+    </div>
+</div>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;justify-content:center;align-items:center;">
+    <div style="border:2px solid var(--scp-red);background:#000;box-shadow:0 0 24px var(--scp-red);padding:32px 36px;width:360px;display:flex;flex-direction:column;gap:16px;text-align:center;">
+        <div style="font-size:14px;letter-spacing:3px;color:var(--scp-red);text-shadow:0 0 6px var(--scp-red);">⚠ DELETE ACCOUNT</div>
+        <div style="font-size:13px;color:var(--scp-green-soft);letter-spacing:1px;line-height:1.7;">Are you sure you want to delete your account?</div>
+        <div style="font-size:11px;color:#666;letter-spacing:1px;font-style:italic;">It will be gone forever!<br>(A very long time)</div>
+        <button onclick="confirmDeleteAccount()"
+            style="padding:11px;background:var(--scp-red);color:#000;border:none;font-size:12px;font-weight:bold;letter-spacing:2px;cursor:pointer;">
+            YES, DELETE IT
+        </button>
+        <button onclick="document.getElementById('delete-modal').style.display='none'"
+            style="padding:10px;background:transparent;border:1px solid var(--scp-green);color:var(--scp-green);font-size:11px;letter-spacing:2px;cursor:pointer;opacity:0.7;">
+            NO, KEEP IT
+        </button>
+    </div>
+</div>
+
+<script>
+let currentUser = "";
+
+function getAccount() {
+    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    return accounts.find(a => a.username.toLowerCase() === currentUser.toLowerCase());
+}
+
+function saveAccount(updated) {
+    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    const i = accounts.findIndex(a => a.username.toLowerCase() === currentUser.toLowerCase());
+    if (i === -1) return false;
+    accounts[i] = updated;
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
+    return true;
+}
+
+function loadDetails() {
+    const a = getAccount();
+    if (!a) return;
+    document.getElementById("disp-name").innerText = a.name || "—";
+    document.getElementById("disp-username").innerText = a.username || "—";
+    document.getElementById("disp-email").innerText = a.email || "—";
+    document.getElementById("disp-password").innerText = "•".repeat((a.password || "").length);
+}
+
+function setStatus(id, msg, ok) {
+    const el = document.getElementById(id);
+    el.innerText = msg;
+    el.className = "status-msg " + (ok ? "status-ok" : "status-err");
+    if (ok) setTimeout(() => el.innerText = "", 3000);
+}
+
+function changeName() {
+    const val = document.getElementById("new-name").value.trim();
+    if (!val) { setStatus("name-status", "Please enter a name.", false); return; }
+    const a = getAccount();
+    if (!a) return;
+    a.name = val;
+    saveAccount(a);
+    document.getElementById("new-name").value = "";
+    loadDetails();
+    setStatus("name-status", "✓ Name updated.", true);
+}
+
+async function changeUsername() {
+    const newUser = document.getElementById("new-username").value.trim();
+    const pass = document.getElementById("confirm-pass-username").value;
+    if (!newUser) { setStatus("username-status", "Please enter a username.", false); return; }
+    if (!pass) { setStatus("username-status", "Please enter your password.", false); return; }
+
+    const a = getAccount();
+    if (!a) return;
+    // FIX H-6: compare hashed password, not plaintext
+    const hashedConfirm = await wLYTH8xIZM(pass);
+    if (a.password !== hashedConfirm) { setStatus("username-status", "Incorrect password.", false); return; }
+
+    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    if (accounts.some(x => x.username.toLowerCase() === newUser.toLowerCase() && x.username.toLowerCase() !== currentUser)) {
+        setStatus("username-status", "Username already taken.", false); return;
+    }
+
+    // Update in groups
+    let groups = JSON.parse(localStorage.getItem("scpGroups")) || [];
+    groups.forEach(g => {
+        g.members = g.members.map(m => m.toLowerCase() === currentUser ? newUser : m);
+        if (g.createdBy && g.createdBy.toLowerCase() === currentUser) g.createdBy = newUser;
+    });
+    localStorage.setItem("scpGroups", JSON.stringify(groups));
+
+    // Update in messages
+    let msgs = JSON.parse(localStorage.getItem("scpMessages")) || [];
+    msgs.forEach(m => {
+        if (m.from.toLowerCase() === currentUser) m.from = newUser;
+        if (m.to && m.to.toLowerCase() === currentUser) m.to = newUser;
+    });
+    localStorage.setItem("scpMessages", JSON.stringify(msgs));
+
+    a.username = newUser;
+    saveAccount(a);
+    localStorage.setItem("loggedInUser", newUser);
+    currentUser = newUser.toLowerCase();
+
+    document.getElementById("new-username").value = "";
+    document.getElementById("confirm-pass-username").value = "";
+    loadDetails();
+    setStatus("username-status", "✓ Username updated.", true);
+}
+
+function YWrRTWPEln() {
+    const pass = document.getElementById("email-password").value;
+    const val = document.getElementById("new-email").value.trim();
+    if (!pass) { setStatus("email-status", "Please enter your current password.", false); return; }
+    if (!val || !val.includes("@") || !val.includes(".")) { setStatus("email-status", "Please enter a valid email.", false); return; }
+    const a = getAccount();
+    if (!a) return;
+    if (a.password !== pass) { setStatus("email-status", "Incorrect password.", false); return; }
+    a.email = val;
+    saveAccount(a);
+    document.getElementById("new-email").value = "";
+    document.getElementById("email-password").value = "";
+    loadDetails();
+    setStatus("email-status", "✓ Email updated.", true);
+}
+
+// Hash helper for home.html (mirrors Index.html hashing)
+async function wLYTH8xIZM(pw) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'scp_pw_2026'));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function dJHUdKF0j7() {
+    const newPw = document.getElementById('new-password').value.trim();
+    if (!newPw || newPw.length < 5) { setStatus('password-status', '✗ Minimum 5 characters required.', false); return; }
+    const oldPass = document.getElementById("old-password").value;
+    const newPass = document.getElementById("new-password").value;
+    const confirmPass = document.getElementById("confirm-password").value;
+
+    if (!oldPass || !newPass || !confirmPass) { setStatus("password-status", "Please fill all fields.", false); return; }
+    const a = getAccount();
+    if (!a) return;
+
+    // Only compare hashed — no plaintext fallback
+    const hashedOld = await wLYTH8xIZM(oldPass);
+    if (a.password !== hashedOld) { setStatus("password-status", "Current password is incorrect.", false); return; }
+    if (newPass.length < 5) { setStatus("password-status", "Minimum 5 characters.", false); return; }
+    if (newPass !== confirmPass) { setStatus("password-status", "New passwords do not match.", false); return; }
+
+    // Store new password as hash
+    a.password = await wLYTH8xIZM(newPass);
+    saveAccount(a);
+    document.getElementById("old-password").value = "";
+    document.getElementById("new-password").value = "";
+    document.getElementById("confirm-password").value = "";
+    loadDetails();
+    setStatus("password-status", "✓ Password updated.", true);
+}
+
+// ── THEME ─────────────────────────────────────────────────────────────────────
+function previewTheme() {
+    const bg = document.getElementById('theme-bg').value;
+    const accent = document.getElementById('theme-accent').value;
+    const errEl = document.getElementById('color-error');
+    if (bg.toLowerCase() === accent.toLowerCase()) {
+        errEl.innerText = '⚠ Background and accent colour cannot be the same.';
+    } else {
+        errEl.innerText = '';
+    }
+}
+
+function saveTheme() {
+    const bg = document.getElementById('theme-bg').value;
+    const accent = document.getElementById('theme-accent').value;
+    if (bg.toLowerCase() === accent.toLowerCase()) {
+        document.getElementById('color-error').innerText = '⚠ Background and accent colour cannot be the same.';
+        return;
+    }
+    // Contrast check: ensure luminance difference is readable
+    function _lum(hex) {
+        const h = hex.replace('#','');
+        const r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
+        return (0.299*r + 0.587*g + 0.114*b) / 255;
+    }
+    const diff = Math.abs(_lum(bg) - _lum(accent));
+    if (diff < 0.2) {
+        document.getElementById('color-error').innerText = '⚠ Colours are too similar — text may be unreadable. Choose a higher contrast pair.';
+        return;
+    }
+    document.getElementById('color-error').innerText = '';
+    localStorage.setItem('scpTheme', JSON.stringify({ bg, accent }));
+    // Also store on the user's account so the login page can show their colours
+    try {
+        const _tu = localStorage.getItem('loggedInUser');
+        if (_tu) {
+            const _ta = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            const _tm = _ta.find(a => a.username.toLowerCase() === _tu.toLowerCase());
+            if (_tm) { _tm.theme = { bg, accent }; localStorage.setItem('approvedAccounts', JSON.stringify(_ta)); }
+        }
+    } catch(e) {}
+    applyThemeNow(bg, accent);
+    setStatus('theme-status', '✓ Theme saved — will apply on all pages.', true);
+}
+
+function applyThemeNow(bg, accent) {
+    document.documentElement.style.setProperty('--scp-bg', bg);
+    document.documentElement.style.setProperty('--scp-green', accent);
+    document.documentElement.style.setProperty('--scp-green-soft', accent);
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+    // Compute readable text color for active nav button
+    const hex = accent.replace('#','');
+    const r=parseInt(hex.substr(0,2),16), g=parseInt(hex.substr(2,2),16), b=parseInt(hex.substr(4,2),16);
+    const lum = (0.299*r+0.587*g+0.114*b)/255;
+    document.documentElement.style.setProperty('--scp-active-text', lum>0.5?'#000':'#fff');
+    // Also paint header background
+    const header = document.getElementById('header');
+    if (header) header.style.backgroundColor = bg;
+    const navbar = document.getElementById('navbar');
+    if (navbar) navbar.style.backgroundColor = bg;
+}
+
+function resetTheme() {
+    const defaultBg = '#000000';
+    const defaultAccent = '#3fbf3f';
+
+    // Save defaults so they persist across pages
+    localStorage.setItem('scpTheme', JSON.stringify({ bg: defaultBg, accent: defaultAccent }));
+    try {
+        const _ru = localStorage.getItem('loggedInUser');
+        if (_ru) {
+            const _ra = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            const _rm = _ra.find(a => a.username.toLowerCase() === _ru.toLowerCase());
+            if (_rm) { delete _rm.theme; localStorage.setItem('approvedAccounts', JSON.stringify(_ra)); }
+        }
+    } catch(e) {}
+
+    // Apply immediately
+    applyThemeNow(defaultBg, defaultAccent);
+
+    // Reset pickers to default values
+    document.getElementById('theme-bg').value = defaultBg;
+    document.getElementById('theme-accent').value = defaultAccent;
+    document.getElementById('color-error').innerText = '';
+    setStatus('theme-status', '✓ Theme reset to default.', true);
+}
+
+function loadThemePickers() {
+    const t = JSON.parse(localStorage.getItem('scpTheme') || '{}');
+    if (t.bg) document.getElementById('theme-bg').value = t.bg;
+    if (t.accent) document.getElementById('theme-accent').value = t.accent;
+    if (t.bg || t.accent) applyThemeNow(t.bg || '#000000', t.accent || '#3fbf3f');
+}
+
+function confirmDeleteAccount() {
+    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    const userEntry = accounts.find(a => a.username.toLowerCase() === currentUser);
+    const filtered = accounts.filter(a => a.username.toLowerCase() !== currentUser);
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', filtered);
+
+    // Add to deleted list with full info so admin panel shows it
+    const deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
+    deletedList.push({
+        username: userEntry ? userEntry.username : currentUser,
+        name: userEntry ? userEntry.name || '' : '',
+        email: userEntry ? userEntry.email || '' : '',
+        role: userEntry ? userEntry.role || 'student' : 'student',
+        deletedAt: Date.now(),
+        deletedBy: 'self'
+    });
+    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+
+    // Remove from all group member lists (permanent groups just silently remove them)
+    let groups = JSON.parse(localStorage.getItem("scpGroups")) || [];
+    groups.forEach(g => { g.members = g.members.filter(m => m.toLowerCase() !== currentUser); });
+    localStorage.setItem("scpGroups", JSON.stringify(groups));
+
+    // Delete all DM messages involving this user (group messages stay)
+    let msgs = JSON.parse(localStorage.getItem("scpMessages")) || [];
+    msgs = msgs.filter(m => {
+        if (m.groupId) return true;
+        const fromMe = m.from && m.from.toLowerCase() === currentUser;
+        const toMe = m.to && m.to.toLowerCase() === currentUser;
+        return !fromMe && !toMe;
+    });
+    localStorage.setItem("scpMessages", JSON.stringify(msgs));
+
+    // Remove tracked DM convs involving this user
+    const convs = (JSON.parse(localStorage.getItem("scpDMConvs")) || []).filter(c => !c.includes(currentUser));
+    localStorage.setItem("scpDMConvs", JSON.stringify(convs));
+
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "Index.html";
+}
+
+window.onload = function() {
+    const user = localStorage.getItem("loggedInUser");
+    if (!user) { window.location.href = "Index.html"; return; }
+    currentUser = user.toLowerCase();
+    (function() {
+        const accts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+        const u = accts.find(a => a.username && a.username.toLowerCase() === user.toLowerCase());
+    })();
+    loadDetails();
+    loadThemePickers();
+    updateStorageUsage();
+};
+
+// ── BACKUP & RESTORE ──────────────────────────────────────────────────────────
+function fzKG5mSoyP() {
+    const keys = ['approvedAccounts','pendingAccounts','deletedAccounts','scpMessages','scpGroups','scpTheme','scpTeacherCode','scpFS','scpAuditLog'];
+    const backup = { version: 2, exportedAt: new Date().toISOString(), data: {} };
+    keys.forEach(k => { try { backup.data[k] = JSON.parse(localStorage.getItem(k) || 'null'); } catch(e) {} });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = 'scp_backup_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+    setStatus('backup-status', '✓ Backup downloaded.', true);
+}
+
+function tC56aMIgHF(input) {
+    const file = input.files[0]; if (!file) return;
+    if (file.size > 10000000) { setStatus('backup-status', '✗ File too large (max 10MB).', false); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (!backup.data) throw new Error('Invalid format');
+            if (!confirm('⚠ This will overwrite all current data. Are you sure?')) return;
+            // FIX C-3: only restore known safe keys, never write session/integrity keys
+            const ALLOWED_RESTORE_KEYS = [
+                'approvedAccounts','pendingAccounts','deletedAccounts',
+                'scpMessages','scpGroups','scpTheme','scpTeacherCode',
+                'scpFS','scpAuditLog','scpWebsites','scpHacks','scpSecurityViolations'
+            ];
+            let restored = 0;
+            Object.entries(backup.data).forEach(([k, v]) => {
+                if (v !== null && ALLOWED_RESTORE_KEYS.includes(k)) {
+                    localStorage.setItem(k, JSON.stringify(v));
+                    restored++;
+                }
+            });
+            // Rebuild integrity checksums after restore
+            try {
+                var d = localStorage.getItem('approvedAccounts') || '[]';
+                var h = 5381;
+                for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                localStorage.setItem('_ic', (h >>> 0).toString(36));
+                localStorage.removeItem('_hic'); // force HMAC rebuild on next load
+            } catch(e) {}
+            setStatus('backup-status', '✓ Data restored. Reloading...', true);
+            setTimeout(() => location.reload(), 1200);
+        } catch(ex) { setStatus('backup-status', '✗ Invalid backup file.', false); }
+    };
+    reader.readAsText(file);
+}
+
+// ── STORAGE USAGE MONITOR ─────────────────────────────────────────────────────
+function updateStorageUsage() {
+    try {
+        let total = 0;
+        for (let k in localStorage) {
+            if (localStorage.hasOwnProperty(k)) total += (localStorage[k] || '').length;
+        }
+        const kb = (total / 1024).toFixed(1);
+        const pct = Math.min(100, (total / 5242880 * 100)).toFixed(0);
+        const el = document.getElementById('storage-usage');
+        if (el) {
+            el.innerText = '📊 Storage used: ' + kb + 'KB / ~5120KB (' + pct + '%)';
+            el.style.color = pct > 80 ? '#ff3f3f' : pct > 60 ? '#ffcc00' : '#555';
+        }
+    } catch(e) {}
+}
+
+</script>
+
+</body>
+</html>

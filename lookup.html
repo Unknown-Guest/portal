@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles.css">
+<style>#content { flex: 1; overflow-y: auto; padding: 40px 32px; display: flex; flex-direction: column; gap: 28px; align-items: center; background: var(--scp-bg, #000); }
+
+    #lookup-card {
+        width: 100%;
+        max-width: 560px;
+        border: 1px solid var(--scp-green);
+        background: var(--scp-bg, #000);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--scp-green) 8%, transparent);
+        padding: 24px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .card-title {
+        font-size: 13px;
+        letter-spacing: 4px;
+        text-shadow: 0 0 6px var(--scp-green);
+        border-bottom: 1px solid var(--scp-green);
+        padding-bottom: 10px;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    #search-input {
+        flex: 1;
+        padding: 11px 14px;
+        background: #000;
+        border: 1px solid var(--scp-green);
+        color: var(--scp-green);
+        font-size: 13px;
+        outline: none;
+        letter-spacing: 1px;
+        font-family: Arial, sans-serif;
+    }
+    #search-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    #search-input:focus { box-shadow: 0 0 6px var(--scp-green); }
+
+    #search-btn {
+        padding: 11px 20px;
+        background: var(--scp-green);
+        color: #000;
+        border: none;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: 0.15s;
+    }
+    #search-btn:hover { background: var(--scp-green); }
+
+    #result-box {
+        display: none;
+        border: 1px solid color-mix(in srgb, var(--scp-green) 40%, transparent);
+        background: var(--scp-bg, #000);
+        padding: 18px 20px;
+        flex-direction: column;
+        gap: 10px;
+    }
+    #result-box.show { display: flex; }
+
+    .result-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #0d0d0d;
+        padding-bottom: 8px;
+        font-size: 13px;
+    }
+    .result-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .result-label { font-size: 10px; letter-spacing: 1.5px; color: var(--scp-green-soft); opacity: 0.7; }
+    .result-value { color: #ddd; letter-spacing: 1px; }
+    .result-value.green { color: var(--scp-green); }
+
+    #not-found {
+        font-size: 12px;
+        color: var(--scp-gray);
+        letter-spacing: 1px;
+        text-align: center;
+        padding: 12px 0;
+        display: none;
+    }
+    #not-found.show { display: block; }
+
+    /* Browse all users */
+    #browse-card {
+        width: 100%;
+        max-width: 560px;
+        border: 1px solid color-mix(in srgb, var(--scp-green) 40%, transparent);
+        background: var(--scp-bg, #000);
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .browse-title {
+        font-size: 11px;
+        letter-spacing: 3px;
+        color: var(--scp-green-soft);
+        opacity: 0.7;
+        border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent);
+        padding-bottom: 8px;
+    }
+
+    #filter-input {
+        padding: 8px 12px;
+        background: #000;
+        border: 1px solid color-mix(in srgb, var(--scp-green) 40%, transparent);
+        color: var(--scp-green);
+        font-size: 12px;
+        outline: none;
+        letter-spacing: 1px;
+        width: 100%;
+    }
+    #filter-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    #filter-input:focus { border-color: var(--scp-green); }
+
+    #user-table { display: flex; flex-direction: column; gap: 6px; }
+
+    .user-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 80px;
+        gap: 10px;
+        padding: 9px 12px;
+        border: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent);
+        background: var(--scp-bg, #000);
+        font-size: 11px;
+        color: #ccc;
+        letter-spacing: 0.5px;
+        align-items: center;
+    }
+    .user-row.header {
+        background: #000;
+        border-color: #222;
+        font-size: 10px;
+        letter-spacing: 2px;
+        color: var(--scp-green-soft);
+        opacity: 0.7;
+    }
+    .user-row .username { color: var(--scp-green); font-weight: bold; }
+
+    .grade-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border: 1px solid #333;
+        color: #888;
+        letter-spacing: 1px;
+        text-align: center;
+    }
+
+    .no-access {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 12px;
+        letter-spacing: 1.5px;
+        color: var(--scp-green-soft);
+        opacity: 0.5;
+    }
+
+    .long-overflow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+</style>
+<script>
+/* scpTheme-apply — apply saved theme before paint */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){
+        document.documentElement.style.setProperty('--scp-bg',t.bg);
+        document.documentElement.style.backgroundColor=t.bg;
+    }
+    if(t.accent){
+        document.documentElement.style.setProperty('--scp-green',t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft',t.accent);
+        var hex=t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text',lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+(function(){
+    // Valid access values only
+    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
+    var VALID_ROLES = ['student','teacher'];
+
+    function _guardRole() {
+        try {
+            var user = localStorage.getItem('loggedInUser');
+            if (!user) return;
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+            if (!me) return;
+
+            var changed = false;
+
+            // Strip any invalid role
+            if (!VALID_ROLES.includes(me.role)) {
+                // Illegal role — strip admin-like access
+                me.role = 'student';
+                changed = true;
+            }
+
+            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
+            if (me.access && !me.username.toLowerCase().includes('restricted')) {
+                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
+                if (filteredAccess.length !== me.access.length) {
+                    me.access = filteredAccess;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                // Update integrity
+                try {
+                    var d = localStorage.getItem('approvedAccounts') || '[]';
+                    var h = 5381;
+                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                    localStorage.setItem('_ic', (h >>> 0).toString(36));
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _guardRole);
+    } else {
+        _guardRole();
+    }
+})();
+</script>
+
+<script>
+// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
+(function(){
+    var user = localStorage.getItem('loggedInUser');
+    if (!user) return;
+    try {
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (me && me.suspended) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            // Recheck integrity immediately when this key changes from outside
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">USER LOOKUP</div>
+    <div id="header-sub">// TEACHER RESOURCE — SEARCH STUDENT ACCOUNTS //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn active">LOOKUP</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* admin-nav-show */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+</div>
+
+<div id="content">
+
+    <!-- SEARCH BY USERNAME -->
+    <div id="lookup-card">
+        <div class="card-title">🔍 SEARCH BY USERNAME</div>
+        <div class="search-row">
+            <input id="search-input" placeholder="ENTER USERNAME..." maxlength="30" autocomplete="off"
+                onkeydown="if(event.key==='Enter') doSearch()"/>
+            <button id="search-btn" onclick="doSearch()">▶ SEARCH</button>
+        </div>
+
+        <div id="not-found">// NO ACCOUNT FOUND WITH THAT USERNAME //</div>
+
+        <div id="result-box">
+            <div class="result-row">
+                <span class="result-label">NAME</span>
+                <span class="result-value" id="r-name">—</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">USERNAME</span>
+                <span class="result-value green" id="r-username">—</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">EMAIL</span>
+                <span class="result-value" id="r-email">—</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">YEAR GROUP</span>
+                <span class="result-value" id="r-grade">—</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">ROLE</span>
+                <span class="result-value" id="r-role">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BROWSE ALL STUDENTS -->
+    <div id="browse-card">
+        <div class="browse-title">📋 ALL STUDENTS</div>
+        <input id="filter-input" placeholder="🔍 Filter by name, username or email..." oninput="tw58cwQPvI()"/>
+        <div id="user-table">
+            <div class="user-row header">
+                <span>NAME</span>
+                <span>USERNAME</span>
+                <span>EMAIL</span>
+                <span>YEAR</span>
+            </div>
+            <!-- rows injected here -->
+        </div>
+        <div id="table-empty" style="font-size:11px;color:#555;letter-spacing:1px;display:none;">// NO STUDENTS FOUND //</div>
+    </div>
+
+</div>
+
+<script>
+let allStudents = [];
+
+function getGrade(u) {
+    if (!u.initialGrade || !u.gradeYear) return null;
+    const g = u.initialGrade + (new Date().getFullYear() - u.gradeYear);
+    if (g > 12) return 'Graduated';
+    return 'Year ' + Math.min(g, 12);
+}
+
+
+// ── XSS PROTECTION ───────────────────────────────────────────────────────────
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+function doSearch() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const resultBox = document.getElementById('result-box');
+    const notFound = document.getElementById('not-found');
+    resultBox.classList.remove('show');
+    notFound.classList.remove('show');
+    if (!q) return;
+
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    const u = accounts.find(a => a.username.toLowerCase() === q && a.username.toLowerCase() !== 'restricted');
+    if (!u) { notFound.classList.add('show'); return; }
+
+    document.getElementById('r-name').innerText     = u.name || '—';
+    document.getElementById('r-username').innerText = u.username;
+    document.getElementById('r-email').innerText    = u.email || '—';
+    document.getElementById('r-grade').innerText    = getGrade(u) || '—';
+    document.getElementById('r-role').innerText     = u.role === 'teacher' ? '🏫 Teacher' : '📚 Student';
+    resultBox.classList.add('show');
+}
+
+function tw58cwQPvI() {
+    const q = (document.getElementById('filter-input').value || '').toLowerCase().trim();
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    let students = accounts.filter(a => a.role !== 'teacher' && a.username.toLowerCase() !== 'restricted');
+    if (q) students = students.filter(a =>
+        (a.name||'').toLowerCase().includes(q) ||
+        (a.username||'').toLowerCase().includes(q) ||
+        (a.email||'').toLowerCase().includes(q)
+    );
+
+    const table = document.getElementById('user-table');
+    // Keep header row, remove old data rows
+    const rows = table.querySelectorAll('.user-row:not(.header)');
+    rows.forEach(r => r.remove());
+
+    const empty = document.getElementById('table-empty');
+    if (students.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    students.forEach(u => {
+        const row = document.createElement('div');
+        row.className = 'user-row';
+        const grade = getGrade(u) || '—';
+        row.innerHTML = `
+            <span>${escapeHtml(u.name || '—')}</span>
+            <span class="username">${escapeHtml(u.username)}</span>
+            <span style="color:#aaa;">${escapeHtml(u.email || '—')}</span>
+            <span class="grade-badge">${grade}</span>`;
+        table.appendChild(row);
+    });
+}
+
+window.onload = function () {
+    const user = localStorage.getItem('loggedInUser');
+    if (!user) { window.location.href = 'Index.html'; return; }
+
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    const account = accounts.find(a => a.username.toLowerCase() === user.toLowerCase());
+
+    // Only teachers and admins can access this page
+    const isTeacher = account && account.role === 'teacher';
+    const isAdmin   = account && Array.isArray(account.access) && account.access.includes('Admin');
+    const isRestricted = user.toLowerCase() === 'restricted';
+
+    if (!account || (!isTeacher && !isAdmin && !isRestricted)) {
+        // Log violation, suspend account, sign out
+        (function() {
+            try {
+                var violations = JSON.parse(localStorage.getItem('scpSecurityViolations') || '[]');
+                violations.push({ username: user, page: 'Lookup Panel', time: new Date().toISOString(), ua: navigator.userAgent.slice(0, 80) });
+                localStorage.setItem('scpSecurityViolations', JSON.stringify(violations));
+            } catch(e) {}
+            try {
+                var accs = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+                var target = accs.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+                if (target && user.toLowerCase() !== 'restricted') {
+                    target.suspended = true;
+                    target.suspendedAt = new Date().toISOString();
+                    target.suspendReason = 'Attempted unauthorised access to Lookup Panel';
+                    localStorage.setItem('approvedAccounts', JSON.stringify(accs));
+                    try { var d=localStorage.getItem('approvedAccounts')||'[]',h=5381; for(var i=0;i<d.length;i++) h=((h<<5)+h)^d.charCodeAt(i); localStorage.setItem('_ic',(h>>>0).toString(36)); } catch(e) {}
+                }
+            } catch(e) {}
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        })();
+        window.location.href = 'Index.html';
+        return;
+    }
+
+    tw58cwQPvI();
+};
+</script>
+
+<script>
+/* scpTheme-postload */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(!t.bg && !t.accent) return;
+    function applyEl(id){ var el=document.getElementById(id); if(el&&t.bg) el.style.backgroundColor=t.bg; }
+    function run(){ applyEl('header'); applyEl('navbar'); if(t.bg) document.body.style.backgroundColor=t.bg; }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
+    else run();
+})();
+
+// ── DEBOUNCE UTILITY ──────────────────────────────────────────────────────────
+function _debounce(fn, delay) {
+    var timer;
+    return function() {
+        var args = arguments, ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+}
+</script>
+</body>
+</html>

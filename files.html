@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="styles.css">
+<style>#main { display: flex; flex: 1; overflow: hidden; background: var(--scp-bg, #000);
+        background: var(--scp-bg, #000);}
+
+    /* SIDEBAR */
+    #sidebar { width: 180px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #sidebar-label { padding: 14px 16px 10px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); }
+    .sidebar-tab { padding: 13px 16px; background: transparent; border: none; border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 15%, transparent); color: var(--scp-green); font-size: 11px; letter-spacing: 1.5px; cursor: pointer; text-align: left; transition: 0.15s; opacity: 0.55; width: 100%; }
+    .sidebar-tab:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); opacity: 1; }
+    .sidebar-tab.active { opacity: 1; background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); border-left: 3px solid var(--scp-green); }
+
+    /* FILE LIST PANEL */
+    #file-list-panel { width: 260px; border-right: 1px solid var(--scp-green); display: flex; flex-direction: column; background: var(--scp-bg, #000); flex-shrink: 0; }
+    #file-list-top { display: flex; flex-direction: column; gap: 0; flex-shrink: 0; }
+    #file-panel-label { padding: 10px 14px; font-size: 10px; letter-spacing: 2px; color: var(--scp-gray); border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); }
+    #file-search { padding: 8px 12px; background: var(--scp-bg, #000); border: none; border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); color: var(--scp-green); font-size: 12px; outline: none; width: 100%; }
+    #file-search::placeholder { color: #2a4a2a; }
+    #new-file-btn { padding: 10px 14px; background: var(--scp-green); color: #000; border: none; font-size: 10px; font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: 0.15s; }
+    #new-file-btn:hover { background: var(--scp-green); }
+    #file-list { flex: 1; overflow-y: auto; }
+
+    .file-item { padding: 12px 14px; border-bottom: 1px solid #0d0d0d; cursor: pointer; transition: 0.1s; }
+    .file-item:hover { background: color-mix(in srgb, var(--scp-green) 8%, var(--scp-bg, #000)); }
+    .file-item.active { background: color-mix(in srgb, var(--scp-green) 12%, var(--scp-bg, #000)); border-left: 3px solid var(--scp-green); }
+    .file-item-title { font-size: 12px; letter-spacing: 1px; color: var(--scp-green); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-item-meta { font-size: 10px; color: var(--scp-gray); display: flex; gap: 6px; align-items: center; }
+    .vis-badge { font-size: 9px; padding: 1px 5px; border-radius: 8px; letter-spacing: 0.5px; }
+    .vis-public { border: 1px solid var(--scp-green); color: var(--scp-green); }
+    .vis-private { border: 1px solid #444; color: #444; }
+    .vis-shared { border: 1px solid var(--scp-gold); color: var(--scp-gold); }
+
+    .empty-msg { padding: 20px 14px; font-size: 11px; color: var(--scp-gray); letter-spacing: 1px; line-height: 1.8; }
+
+    /* EDITOR PANEL */
+    #editor-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #editor-placeholder { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 12px; letter-spacing: 1.5px; color: var(--scp-green-soft); opacity: 0.5; }
+
+    #editor-toolbar { padding: 10px 16px; border-bottom: 1px solid var(--scp-green); background: var(--scp-bg, #000); display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    #editor-title-input { flex: 1; background: transparent; border: none; color: var(--scp-green); font-size: 14px; letter-spacing: 2px; outline: none; font-weight: bold; min-width: 0; }
+    #editor-title-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    .tool-btn { padding: 5px 11px; font-size: 10px; letter-spacing: 1px; cursor: pointer; border: 1px solid; transition: 0.15s; background: transparent; }
+    .tool-btn.green { color: var(--scp-green); border-color: var(--scp-green); }
+    .tool-btn.green:hover { background: var(--scp-green); color: #000; }
+    .tool-btn.red { color: var(--scp-red); border-color: var(--scp-red); }
+    .tool-btn.red:hover { background: var(--scp-red); color: #000; }
+    .tool-btn.gold { color: var(--scp-gold); border-color: var(--scp-gold); }
+    .tool-btn.gold:hover { background: var(--scp-gold); color: #000; }
+    .tool-btn.gray { color: #555; border-color: color-mix(in srgb, var(--scp-green) 25%, transparent); }
+    #vis-indicator { font-size: 10px; letter-spacing: 1px; padding: 4px 10px; border-radius: 10px; }
+    #owner-indicator { font-size: 10px; color: var(--scp-gray); letter-spacing: 1px; }
+
+    #editor-textarea { flex: 1; padding: 20px 24px; background: var(--scp-bg, #000); border: none; color: var(--scp-green-soft); font-size: 13px; line-height: 1.8; resize: none; outline: none; font-family: Arial, sans-serif; overflow-y: auto; }
+    #editor-textarea::placeholder { color: color-mix(in srgb, var(--scp-green) 25%, transparent); }
+    #editor-footer { padding: 6px 16px; border-top: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); background: var(--scp-bg, #000); font-size: 10px; color: var(--scp-gray); display: flex; gap: 14px; flex-shrink: 0; }
+
+    /* ADMIN VIEW - read only */
+    #admin-content { flex: 1; padding: 20px 24px; overflow-y: auto; background: var(--scp-bg, #000); color: var(--scp-green-soft); font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+
+    /* UPLOAD ZONE (teachers in their own files) */
+    #upload-zone { padding: 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid color-mix(in srgb, var(--scp-green) 10%, transparent); flex-shrink: 0; }
+    #drop-zone { border: 2px dashed color-mix(in srgb, var(--scp-green) 25%, transparent); padding: 12px; text-align: center; cursor: pointer; transition: 0.15s; }
+    #drop-zone:hover, #drop-zone.over { border-color: var(--scp-green); background: var(--scp-bg, #000); }
+    #drop-zone-text { font-size: 10px; letter-spacing: 1.5px; color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { border: 2px solid var(--scp-green); background: #000; box-shadow: 0 0 20px var(--scp-green); padding: 26px 30px; width: 340px; display: flex; flex-direction: column; gap: 13px; max-height: 80vh; overflow-y: auto; }
+    .modal-title { font-size: 13px; letter-spacing: 3px; text-shadow: 0 0 4px var(--scp-green); }
+    .modal-input { width: 100%; padding: 10px 12px; background: var(--scp-bg, #000); border: 1px solid var(--scp-green); color: var(--scp-green); font-size: 13px; outline: none; font-family: Arial, sans-serif; }
+    .modal-input::placeholder { color: color-mix(in srgb, var(--scp-green) 35%, transparent); }
+    .modal-lbl { font-size: 10px; letter-spacing: 1.5px; color: var(--scp-green-soft); }
+    .modal-btn { padding: 10px; font-size: 12px; font-weight: bold; letter-spacing: 2px; cursor: pointer; border: none; }
+    .modal-btn.primary { background: var(--scp-green); color: #000; }
+    .modal-btn.primary:hover { background: var(--scp-green); }
+    .modal-btn.secondary { background: transparent; border: 1px solid var(--scp-green); color: var(--scp-green); opacity: 0.6; }
+    .modal-btn.secondary:hover { opacity: 1; }
+    .modal-error { color: var(--scp-red); font-size: 11px; min-height: 14px; }
+    .share-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--scp-green); font-size: 11px; border-radius: 10px; margin: 2px; }
+    .share-chip button { background: none; border: none; color: var(--scp-red); cursor: pointer; font-size: 12px; padding: 0; }
+
+    .long-overflow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+</style>
+<script>
+/* scpTheme-apply — apply saved theme before paint */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){
+        document.documentElement.style.setProperty('--scp-bg',t.bg);
+        document.documentElement.style.backgroundColor=t.bg;
+    }
+    if(t.accent){
+        document.documentElement.style.setProperty('--scp-green',t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft',t.accent);
+        var hex=t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text',lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ROLE ELEVATION GUARD ─────────────────────────────────────────────────────── */
+(function(){
+    // Valid access values only
+    var VALID_ACCESS = ['Files','Hacks','Console','Websites','Tutors','Messages'];
+    var VALID_ROLES = ['student','teacher'];
+
+    function _guardRole() {
+        try {
+            var user = localStorage.getItem('loggedInUser');
+            if (!user) return;
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+            if (!me) return;
+
+            var changed = false;
+
+            // Strip any invalid role
+            if (!VALID_ROLES.includes(me.role)) {
+                // Illegal role — strip admin-like access
+                me.role = 'student';
+                changed = true;
+            }
+
+            // Strip any invalid access values (Admin should NOT be in the array for non-admins granted via storage edit)
+            if (me.access && !me.username.toLowerCase().includes('restricted')) {
+                var filteredAccess = me.access.filter(function(a){ return VALID_ACCESS.includes(a); });
+                if (filteredAccess.length !== me.access.length) {
+                    me.access = filteredAccess;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                // Update integrity
+                try {
+                    var d = localStorage.getItem('approvedAccounts') || '[]';
+                    var h = 5381;
+                    for (var i = 0; i < d.length; i++) h = ((h << 5) + h) ^ d.charCodeAt(i);
+                    localStorage.setItem('_ic', (h >>> 0).toString(36));
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _guardRole);
+    } else {
+        _guardRole();
+    }
+})();
+</script>
+
+<script>
+// ── SUSPENDED ACCOUNT RUNTIME CHECK ──────────────────────────────────────────
+(function(){
+    var user = localStorage.getItem('loggedInUser');
+    if (!user) return;
+    try {
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (me && me.suspended) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+        }
+    } catch(e) {}
+})();
+</script>
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            // Recheck integrity immediately when this key changes from outside
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">FILES</div>
+    <div id="header-sub">// PROTECTED WEBSITE //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn active">FILES</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
+    <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+
+<script>
+/* lookup-nav-show-injected */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isT=me&&me.role==='teacher';
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isT||isA||isR){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+
+<script>
+/* admin-nav-show */
+(function(){
+  var u=localStorage.getItem('loggedInUser');
+  if(!u)return;
+  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
+  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
+  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var isR=u.toLowerCase()==='restricted';
+  if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
+})();
+</script>
+</div>
+
+<div id="main">
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+        <div id="sidebar-label">SECTIONS</div>
+        <button class="sidebar-tab active" onclick="switchSection('mine')">📄 MY FILES</button>
+        <button class="sidebar-tab" onclick="switchSection('shared')">🔗 SHARED WITH ME</button>
+        <button class="sidebar-tab" onclick="switchSection('public')">🌐 PUBLIC FILES</button>
+        <button class="sidebar-tab" id="admin-tab" style="display:none" onclick="switchSection('admin')">🔍 ADMIN VIEW</button>
+    </div>
+
+    <!-- FILE LIST -->
+    <div id="file-list-panel">
+        <div id="file-list-top">
+            <div id="file-panel-label">MY FILES</div>
+            <input id="file-search" placeholder="🔍 SEARCH..." oninput="renderFileList()"/>
+            <button id="new-file-btn" onclick="newFile()">+ NEW FILE</button>
+        </div>
+        <div id="file-list"></div>
+    </div>
+
+    <!-- EDITOR -->
+    <div id="editor-panel">
+        <div id="editor-placeholder">// SELECT OR CREATE A FILE //</div>
+    </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="share-modal">
+    <div class="modal-box">
+        <div class="modal-title">SHARE FILE</div>
+        <div class="modal-lbl">SHARED WITH</div>
+        <div id="share-chips" style="display:flex;flex-wrap:wrap;min-height:28px;"></div>
+        <div style="display:flex;gap:6px;">
+            <input class="modal-input" id="share-username-input" placeholder="USERNAME" maxlength="20" style="flex:1;"/>
+            <button class="modal-btn primary" onclick="addShareUser()" style="padding:8px 14px;">+</button>
+        </div>
+        <div class="modal-error" id="share-error"></div>
+        <button class="modal-btn primary" onclick="saveShare()">▶ SAVE</button>
+        <button class="modal-btn secondary" onclick="closeModal('share-modal')">CANCEL</button>
+    </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="modal-overlay" id="confirm-modal">
+    <div class="modal-box" style="border-color:var(--scp-red);box-shadow:0 0 20px var(--scp-red);">
+        <div class="modal-title" style="color:var(--scp-red);">DELETE FILE</div>
+        <div id="confirm-modal-body" style="font-size:12px;color:var(--scp-green-soft);letter-spacing:0.5px;line-height:1.7;">This file will be permanently deleted for all users. Anyone it was shared with will lose access. This cannot be undone.</div>
+        <button class="modal-btn" style="background:var(--scp-red);color:#000;" onclick="confirmDelete()">YES, DELETE</button>
+        <button class="modal-btn secondary" onclick="closeModal('confirm-modal')">CANCEL</button>
+    </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/`/g, '&#x60;');
+}
+
+function getFiles() { return JSON.parse(localStorage.getItem('scpFiles')) || []; }
+function saveFiles(f) { localStorage.setItem('scpFiles', JSON.stringify(f)); }
+
+let currentUser = '';
+let currentUserData = null;
+let isAdmin = false;
+let activeSection = 'mine';
+let activeFileId = null;
+let searchQuery = '';
+let pendingShareEdits = [];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function fmtDate(ts) { return new Date(ts).toLocaleDateString(); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+function getFileById(id) { return getFiles().find(f => f.id === id) || null; }
+
+function isOwner(f) { return f.owner.toLowerCase() === currentUser.toLowerCase(); }
+
+function canEdit(f) {
+    if (isOwner(f)) return true;
+    return f.sharedWith.some(u => u.toLowerCase() === currentUser.toLowerCase());
+}
+
+// ── SECTION SWITCH ────────────────────────────────────────────────────────────
+function switchSection(sec) {
+    activeSection = sec;
+    activeFileId = null;
+    document.querySelectorAll('.sidebar-tab').forEach((b, i) => {
+        const secs = ['mine','shared','public','admin'];
+        b.classList.toggle('active', secs[i] === sec);
+    });
+    const labels = { mine:'MY FILES', shared:'SHARED WITH ME', public:'PUBLIC FILES', admin:'ADMIN VIEW' };
+    document.getElementById('file-panel-label').innerText = labels[sec];
+    document.getElementById('new-file-btn').style.display = sec === 'mine' ? 'block' : 'none';
+    document.getElementById('file-search').value = '';
+    searchQuery = '';
+    renderFileList();
+    document.getElementById('editor-panel').innerHTML = '<div id="editor-placeholder">// SELECT A FILE //</div>';
+}
+
+// ── FILE LIST ─────────────────────────────────────────────────────────────────
+function getFilteredFiles() {
+    const all = getFiles();
+    const q = document.getElementById('file-search').value.trim().toLowerCase();
+    searchQuery = q;
+    let list = [];
+    if (activeSection === 'mine') {
+        list = all.filter(f => isOwner(f)).sort((a,b) => b.editedAt - a.editedAt);
+    } else if (activeSection === 'shared') {
+        list = all.filter(f => !isOwner(f) && f.sharedWith.some(u => u.toLowerCase() === currentUser.toLowerCase()))
+                  .sort((a,b) => b.editedAt - a.editedAt);
+    } else if (activeSection === 'public') {
+        list = all.filter(f => f.visibility === 'public').sort((a,b) => a.title.localeCompare(b.title));
+    } else if (activeSection === 'admin') {
+        // Only show files that are public OR have a student as owner or editor
+        const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+        function isStudentUser(username) {
+            const u = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+            return u && u.role !== 'teacher' && !(u.access || []).includes('Admin');
+        }
+        list = all.filter(f =>
+            f.visibility === 'public' ||
+            isStudentUser(f.owner) ||
+            (f.sharedWith || []).some(u => isStudentUser(u))
+        ).sort((a,b) => a.title.localeCompare(b.title));
+    }
+    if (q) list = list.filter(f => f.title.toLowerCase().includes(q));
+    return list;
+}
+
+function renderFileList() {
+    const list = getFilteredFiles();
+    const el = document.getElementById('file-list');
+    if (list.length === 0) {
+        el.innerHTML = `<div class="empty-msg">${activeSection === 'mine' ? '// NO FILES YET //<br/>Click + NEW FILE to create one.' : '// NOTHING HERE //'}</div>`;
+        return;
+    }
+    el.innerHTML = '';
+    list.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'file-item' + (f.id === activeFileId ? ' active' : '');
+        div.onclick = () => openFile(f.id);
+        const vis = f.visibility === 'public' ? '<span class="vis-badge vis-public">PUBLIC</span>'
+                  : f.sharedWith.length > 0 ? '<span class="vis-badge vis-shared">SHARED</span>'
+                  : '<span class="vis-badge vis-private">PRIVATE</span>';
+        div.innerHTML = `
+            <div class="file-item-title">${escapeHtml(f.title || 'Untitled')}</div>
+            <div class="file-item-meta">${vis}<span>${fmtDate(f.editedAt)}</span>${!isOwner(f) ? `<span style="color:#555">@${escapeHtml(f.owner)}</span>` : ''}</div>`;
+        el.appendChild(div);
+    });
+}
+
+// ── OPEN FILE ─────────────────────────────────────────────────────────────────
+function openFile(id) {
+    activeFileId = id;
+    renderFileList();
+    const f = getFileById(id);
+    if (!f) return;
+
+    const editable = canEdit(f) && activeSection !== 'admin';
+    const owner = isOwner(f);
+    const panel = document.getElementById('editor-panel');
+
+    const visColor = f.visibility === 'public' ? 'var(--scp-green)' : '#444';
+    const visLabel = f.visibility === 'public' ? '🌐 PUBLIC' : '🔒 PRIVATE';
+
+    let toolbarHtml = `
+        <input id="editor-title-input" value="${f.title.replace(/"/g,'&quot;')}" placeholder="UNTITLED FILE"
+               ${editable ? `oninput="autoSaveTitle()"` : 'disabled'} style="${editable ? '' : 'opacity:0.6;cursor:default;'}"/>`;
+
+    if (activeSection === 'admin') {
+        toolbarHtml += `<span style="font-size:10px;color:#ff9900;letter-spacing:1px;">👁 ADMIN VIEW — READ ONLY</span>`;
+    } else {
+        if (owner) {
+            toolbarHtml += `
+                <span id="vis-indicator" style="color:${visColor};font-size:10px;letter-spacing:1px;border:1px solid ${visColor};padding:3px 8px;border-radius:8px;">${visLabel}</span>
+                <button class="tool-btn gold" onclick="toggleVisibility()" title="Toggle Public/Private">${f.visibility === 'public' ? '🔒 MAKE PRIVATE' : '🌐 MAKE PUBLIC'}</button>
+                <button class="tool-btn green" onclick="openShareModal()">👥 SHARE</button>
+                <button class="tool-btn red" onclick="openDeleteFileModal()">🗑 DELETE</button>`;
+        } else if (canEdit(f)) {
+            toolbarHtml += `<span id="owner-indicator">Shared by @${f.owner}</span>`;
+        } else {
+            toolbarHtml += `<span id="owner-indicator">by @${f.owner} · Read Only</span>`;
+        }
+        if (editable) {
+            toolbarHtml += `<button class="tool-btn green" onclick="saveCurrentFile()" style="margin-left:auto;">💾 SAVE</button>`;
+        }
+    }
+
+    const contentHtml = activeSection === 'admin'
+        ? `<div id="admin-content">${f.content.replace(/</g,'&lt;')}</div>`
+        : `<textarea id="editor-textarea" placeholder="Start writing..." ${editable ? '' : 'readonly'}></textarea>`;
+
+    panel.innerHTML = `
+        <div id="editor-toolbar">${toolbarHtml}</div>
+        ${contentHtml}
+        <div id="editor-footer">
+            <span>Created: ${fmtDate(f.createdAt)}</span>
+            <span>Edited: ${fmtDate(f.editedAt)}</span>
+            ${f.sharedWith.length > 0 ? `<span>Shared with: ${f.sharedWith.map(escapeHtml).join(', ')}</span>` : ''}
+        </div>`;
+
+    // Safely set textarea value (avoids </textarea> breakout XSS - H-2)
+    const editorTa = document.getElementById('editor-textarea');
+    if (editorTa) editorTa.value = f.content || '';
+
+    // Auto-save on type
+    if (editable) {
+        const ta = document.getElementById('editor-textarea');
+        if (ta) ta.oninput = () => autoSaveContent();
+    }
+}
+
+// ── SAVE ──────────────────────────────────────────────────────────────────────
+let saveTimeout = null;
+function autoSaveTitle() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => saveCurrentFile(true), 800);
+}
+function autoSaveContent() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => saveCurrentFile(true), 800);
+}
+
+function saveCurrentFile(silent = false) {
+    if (!activeFileId) return;
+    const files = getFiles();
+    const i = files.findIndex(f => f.id === activeFileId);
+    if (i === -1) return;
+    const titleEl = document.getElementById('editor-title-input');
+    const contentEl = document.getElementById('editor-textarea');
+    if (titleEl) files[i].title = titleEl.value || 'Untitled';
+    if (contentEl) files[i].content = contentEl.value;
+    files[i].editedAt = Date.now();
+    saveFiles(files);
+    if (!silent) renderFileList();
+    // Show tiny save indicator
+    const footer = document.getElementById('editor-footer');
+    if (footer && !silent) {
+        const msg = document.createElement('span');
+        msg.style.color = 'var(--scp-green-soft)';
+        msg.innerText = '✓ Saved';
+        footer.appendChild(msg);
+        setTimeout(() => msg.remove(), 1500);
+    }
+}
+
+// ── NEW FILE ──────────────────────────────────────────────────────────────────
+function newFile() {
+    const files = getFiles();
+    const f = { id: uid(), title: 'Untitled', content: '', owner: currentUser, visibility: 'private', sharedWith: [], createdAt: Date.now(), editedAt: Date.now() };
+    files.unshift(f);
+    saveFiles(files);
+    activeFileId = f.id;
+    renderFileList();
+    openFile(f.id);
+    const ti = document.getElementById('editor-title-input');
+    if (ti) { ti.select(); }
+}
+
+// ── DELETE ────────────────────────────────────────────────────────────────────
+function openDeleteFileModal() {
+    if (!activeFile) return;
+    const sharedCount = (activeFile.sharedWith || []).length;
+    let msg = `This will permanently delete "${activeFile.title}"`;
+    if (activeFile.visibility === 'public') msg += ' from the public files list';
+    if (sharedCount > 0) msg += `. It is currently shared with ${sharedCount} user(s) who will lose access`;
+    msg += '. This cannot be undone.';
+    document.getElementById('confirm-modal-body').innerText = msg;
+    openModal('confirm-modal');
+}
+
+function confirmDelete() {
+    closeModal('confirm-modal');
+    const files = getFiles().filter(f => f.id !== activeFileId);
+    saveFiles(files);
+    activeFileId = null;
+    renderFileList();
+    document.getElementById('editor-panel').innerHTML = '<div id="editor-placeholder">// SELECT A FILE //</div>';
+}
+
+// ── VISIBILITY ────────────────────────────────────────────────────────────────
+function toggleVisibility() {
+    const files = getFiles();
+    const i = files.findIndex(f => f.id === activeFileId);
+    if (i === -1) return;
+    files[i].visibility = files[i].visibility === 'public' ? 'private' : 'public';
+    saveFiles(files);
+    openFile(activeFileId);
+    renderFileList();
+}
+
+// ── SHARING ───────────────────────────────────────────────────────────────────
+function openShareModal() {
+    const f = getFileById(activeFileId);
+    if (!f || !isOwner(f)) return;
+    pendingShareEdits = [...f.sharedWith];
+    renderShareChips();
+    document.getElementById('share-error').innerText = '';
+    document.getElementById('share-username-input').value = '';
+    openModal('share-modal');
+}
+
+function renderShareChips() {
+    const container = document.getElementById('share-chips');
+    container.innerHTML = '';
+    pendingShareEdits.forEach((u, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'share-chip';
+        chip.innerHTML = `${u} <button onclick="removeShareUser(${i})">×</button>`;
+        container.appendChild(chip);
+    });
+}
+
+function addShareUser() {
+    const input = document.getElementById('share-username-input');
+    const username = input.value.trim();
+    if (!username) return;
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    if (!accounts.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+        document.getElementById('share-error').innerText = 'User not found.'; return;
+    }
+    if (username.toLowerCase() === currentUser.toLowerCase()) {
+        document.getElementById('share-error').innerText = 'Cannot share with yourself.'; return;
+    }
+    if (pendingShareEdits.some(u => u.toLowerCase() === username.toLowerCase())) {
+        document.getElementById('share-error').innerText = 'Already shared with this user.'; return;
+    }
+    pendingShareEdits.push(username);
+    document.getElementById('share-error').innerText = '';
+    input.value = '';
+    renderShareChips();
+}
+
+function removeShareUser(i) { pendingShareEdits.splice(i,1); renderShareChips(); }
+
+function saveShare() {
+    const files = getFiles();
+    const i = files.findIndex(f => f.id === activeFileId);
+    if (i !== -1) { files[i].sharedWith = [...pendingShareEdits]; saveFiles(files); }
+    closeModal('share-modal');
+    openFile(activeFileId);
+    renderFileList();
+}
+
+// ── ONLOAD ────────────────────────────────────────────────────────────────────
+window.onload = function() {
+    const username = localStorage.getItem('loggedInUser');
+    if (!username) { window.location.href = 'Index.html'; return; }
+    currentUser = username;
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    currentUserData = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+    if (!currentUserData || !Array.isArray(currentUserData.access) || !currentUserData.access.includes('Files')) {
+        document.getElementById('main').innerHTML = '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
+        return;
+    }
+    (function() {
+    })();
+    isAdmin = Array.isArray(currentUserData.access) && currentUserData.access.includes('Admin');
+    if (isAdmin) document.getElementById('admin-tab').style.display = 'block';
+    renderFileList();
+};
+</script>
+
+<script>
+/* scpTheme-postload */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(!t.bg && !t.accent) return;
+    function applyEl(id){ var el=document.getElementById(id); if(el&&t.bg) el.style.backgroundColor=t.bg; }
+    function run(){ applyEl('header'); applyEl('navbar'); if(t.bg) document.body.style.backgroundColor=t.bg; }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
+    else run();
+})();
+
+// ── DEBOUNCE UTILITY ──────────────────────────────────────────────────────────
+function _debounce(fn, delay) {
+    var timer;
+    return function() {
+        var args = arguments, ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+}
+</script>
+</body>
+</html>

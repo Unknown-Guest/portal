@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){
+        document.documentElement.style.setProperty('--scp-bg',t.bg);
+        document.documentElement.style.backgroundColor=t.bg;
+    }
+    if(t.accent){document.documentElement.style.setProperty('--scp-green',t.accent);document.documentElement.style.setProperty('--scp-green-soft',t.accent);}
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>.section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 30px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid var(--scp-green);
+        padding-bottom: 8px;
+    }
+
+    .section-header h2 {
+        font-size: 14px;
+        margin: 0;
+        letter-spacing: 3px;
+        color: var(--scp-green);
+        text-shadow: 0 0 4px var(--scp-green);
+    }
+
+    /* Search bar for admin sections */
+    .section-search {
+        padding: 5px 10px;
+        background: var(--scp-bg, #000);
+        border: 1px solid #2a5a2a;
+        color: var(--scp-green);
+        font-size: 11px;
+        outline: none;
+        letter-spacing: 1px;
+        width: 200px;
+        flex-shrink: 0;
+    }
+    .section-search::placeholder { color: #2a5a2a; }
+    .section-search:focus { border-color: var(--scp-green); }
+
+    .refresh-btn {
+        padding: 5px 12px;
+        font-size: 11px;
+        cursor: pointer;
+        border: 1px solid var(--scp-green);
+        background: transparent;
+        color: var(--scp-green);
+        letter-spacing: 1.5px;
+        box-shadow: 0 0 4px var(--scp-green);
+        transition: 0.15s;
+    }
+    .refresh-btn:hover { background: var(--scp-green); color: #000; }
+
+    .request-item, .account-item {
+        border: 1px solid var(--scp-green);
+        padding: 16px 20px;
+        margin-bottom: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: var(--scp-bg, #000);
+        box-shadow: 0 0 6px color-mix(in srgb, #3fbf3f 8%, transparent), inset 0 0 2px color-mix(in srgb, #3fbf3f 5%, transparent);
+        font-size: 13px;
+        color: #ddd;
+        line-height: 1.9;
+    }
+    .account-info-top { display: flex; flex-direction: column; }
+    .account-controls-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    .request-item b, .account-item b {
+        color: var(--scp-green-soft);
+    }
+
+    .admin-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+        cursor: pointer;
+        border: 1px solid var(--scp-green);
+        background: transparent;
+        color: var(--scp-green);
+        margin-left: 6px;
+        letter-spacing: 1px;
+        box-shadow: 0 0 3px var(--scp-green);
+        transition: 0.15s;
+    }
+    .admin-btn:hover { background: var(--scp-green); color: #000; }
+    .admin-btn.allow { background: var(--scp-green); color: #000; }
+    .admin-btn.allow:hover { background: #5fff5f; }
+    .admin-btn.iFfcgMXAdx-btn { border-color: var(--scp-red); color: var(--scp-red); box-shadow: 0 0 3px var(--scp-red); }
+    .admin-btn.iFfcgMXAdx-btn:hover { background: var(--scp-red); color: #000; }
+    .admin-btn.delete { border-color: var(--scp-red); color: var(--scp-red); box-shadow: 0 0 3px var(--scp-red); }
+    .admin-btn.delete:hover { background: var(--scp-red); color: #000; }
+    .admin-btn.delete.disabled { border-color: #555; color: #555; cursor: not-allowed; box-shadow: none; }
+    .admin-btn.delete.disabled:hover { background: transparent; color: #555; }
+    .special-account { border-color: #ff3f3f !important; box-shadow: 0 0 6px #1a0000 !important; }
+    .admin-btn.orange-on { border-color: var(--scp-orange); color: var(--scp-orange); box-shadow: 0 0 4px var(--scp-orange); }
+    .admin-btn.orange-on:hover { background: var(--scp-orange); color: #000; }
+    .admin-btn.orange-off { border-color: #555; color: #777; box-shadow: none; }
+    .admin-btn.orange-off:hover { border-color: var(--scp-orange); color: var(--scp-orange); }
+
+    .star-btn { font-size: 20px; cursor: pointer; margin-right: 6px; user-select: none; transition: 0.15s; }
+    .star-off { color: #777; }
+    .star-on { color: var(--scp-gold); text-shadow: 0 0 6px var(--scp-gold); }
+
+    .access-btn {
+        padding: 5px 10px;
+        margin-left: 6px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: 0.15s;
+        border: 1px solid;
+        letter-spacing: 0.5px;
+        background: transparent;
+    }
+    .access-on { color: var(--scp-green); border-color: var(--scp-green); box-shadow: 0 0 4px var(--scp-green); }
+    .access-on:hover { background: var(--scp-green); color: #000; }
+    .access-off { color: var(--scp-red); border-color: var(--scp-red); box-shadow: 0 0 3px var(--scp-red); }
+    .access-off:hover { background: var(--scp-red); color: #000; }
+
+    .empty-msg {
+        font-size: 12px;
+        color: #aaa;    /* readable on black */
+        letter-spacing: 1px;
+        padding: 10px 0;
+    }
+
+    .account-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .btn-col { display: flex; flex-direction: column; gap: 4px; margin-left: 6px; }
+    .btn-col .admin-btn { margin-left: 0; }
+
+    /* Deleted account item looks different — grey border, lighter text */
+    .deleted-item {
+        border: 1px solid #444;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        background: var(--scp-bg, #000);
+        color: #ccc;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .deleted-item b { color: #aaa; }
+    .deleted-badge { font-size: 10px; padding: 2px 6px; border: 1px solid #555; color: #888; letter-spacing: 1px; margin-left: 8px; }
+
+    /* ── NAVBAR ── */
+    .long-overflow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+
+    #admin-content { flex: 1; overflow-y: auto; padding: 32px 40px 60px; min-height: 0; }
+</style>
+<script>
+/* scpTheme-apply */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(t.bg){document.documentElement.style.setProperty('--scp-bg',t.bg);document.documentElement.style.backgroundColor=t.bg;}
+    if(t.accent){
+        document.documentElement.style.setProperty('--scp-green',t.accent);
+        document.documentElement.style.setProperty('--scp-green-soft',t.accent);
+        var hex=t.accent.replace('#','');
+        var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,2),16),b=parseInt(hex.substr(4,2),16);
+        var lum=(0.299*r+0.587*g+0.114*b)/255;
+        document.documentElement.style.setProperty('--scp-active-text',lum>0.5?'#000':'#fff');
+    }
+})();
+</script>
+
+<script>
+/* Global error handler — prevents blank pages from uncaught errors */
+window.addEventListener('error', function(e) {
+    console.warn('SCP caught error:', e.message, 'at', e.filename, e.lineno);
+    // Don't show anything to the user — just prevent crash
+    e.preventDefault();
+    return true;
+});
+window.addEventListener('unhandledrejection', function(e) {
+    console.warn('SCP unhandled promise:', e.reason);
+    e.preventDefault();
+});
+</script>
+
+
+<script>
+/* Storage size warning */
+(function(){
+    try {
+        var total = 0;
+        for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
+        if (total > 4500000) {
+            var w = document.createElement('div');
+            w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
+            w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(w); });
+        }
+    } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* ── AUTO-LOGOUT ON INACTIVITY (15 min) ──────────────────────────────────────── */
+(function(){
+    var IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    var WARN_MS = 13 * 60 * 1000; // warn at 13 minutes
+    var _idleTimer, _warnTimer, _warnBanner;
+
+    function _createWarnBanner() {
+        if (_warnBanner) return;
+        _warnBanner = document.createElement('div');
+        _warnBanner.id = '_idle_warn';
+        _warnBanner.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a1a00;color:#ffcc00;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;padding:7px 14px;text-align:center;border-bottom:1px solid #ffcc00;';
+        _warnBanner.innerHTML = '⏱ You will be logged out in 2 minutes due to inactivity. <button onclick="_resetIdleTimer()" style="margin-left:12px;background:#ffcc00;color:#000;border:none;padding:3px 10px;font-size:10px;font-weight:bold;cursor:pointer;letter-spacing:1px;">STAY LOGGED IN</button>';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_warnBanner); });
+    }
+
+    function _logout() {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+    }
+
+    window._resetIdleTimer = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warnTimer);
+        if (_warnBanner) _warnBanner.style.display = 'none';
+        _warnTimer = setTimeout(function(){
+            if (_warnBanner) _warnBanner.style.display = 'block';
+        }, WARN_MS);
+        _idleTimer = setTimeout(_logout, IDLE_MS);
+    };
+
+    _createWarnBanner();
+    _resetIdleTimer();
+
+    // Reset on any user activity
+    ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(evt){
+        document.addEventListener(evt, _resetIdleTimer, { passive: true });
+    });
+})();
+</script>
+
+
+<script>
+/* ── DEVTOOLS DETECTION ───────────────────────────────────────────────────────── */
+(function(){
+    var _open = false;
+    var _blurActive = false;
+
+    // Method 1: debugger timing trick
+    function _checkDebugger() {
+        var t = Date.now();
+        (function(){ debugger; })();
+        if (Date.now() - t > 80 && !_open) {
+            _open = true;
+            _onOpen();
+        } else if (Date.now() - t <= 80 && _open) {
+            _open = false;
+            _onClose();
+        }
+    }
+
+    // Method 2: window size difference
+    function _checkSize() {
+        var diff = window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200;
+        if (diff && !_open) { _open = true; _onOpen(); }
+        else if (!diff && _open) { _open = false; _onClose(); }
+    }
+
+    function _onOpen() {
+        // Blur content briefly and show warning
+        if (!_blurActive) {
+            _blurActive = true;
+            document.body.style.filter = 'blur(6px)';
+            setTimeout(function(){ document.body.style.filter = ''; _blurActive = false; }, 2500);
+        }
+        console.clear();
+        console.log('%c⛔ STOP', 'color:#ff3f3f;font-size:48px;font-weight:bold;');
+        console.log('%cThis is a private site. Modifying localStorage data is detected and will invalidate your session.', 'color:#ff3f3f;font-size:14px;');
+    }
+
+    function _onClose() { /* nothing */ }
+
+    setInterval(_checkDebugger, 2000);
+    setInterval(_checkSize, 1500);
+})();
+</script>
+
+
+<script>
+/* ── ADMIN ACCESS GUARD ────────────────────────────────────────────────────────── */
+(function(){
+    function logSecurityViolation(user, page) {
+        try {
+            var violations = JSON.parse(localStorage.getItem('scpSecurityViolations') || '[]');
+            var vEntry = { username: user, page: page, time: new Date().toISOString(), ua: navigator.userAgent.slice(0, 80) };
+            violations.push(vEntry);
+            localStorage.setItem('scpSecurityViolations', JSON.stringify(violations));
+            // Also embed in the account object — survives clearing scpSecurityViolations
+            try {
+                var _va = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+                var _vm = _va.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+                if (_vm) {
+                    if (!Array.isArray(_vm.violations)) _vm.violations = [];
+                    _vm.violations.push(vEntry);
+                    localStorage.setItem('approvedAccounts', JSON.stringify(_va));
+                }
+            } catch(e) {}
+        } catch(e) {}
+    }
+    function suspendAccount(username) {
+        try {
+            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+            var acc = accounts.find(function(a){ return a.username.toLowerCase() === username.toLowerCase(); });
+            if (acc && username.toLowerCase() !== 'restricted') {
+                acc.suspended = true;
+                acc.suspendedAt = new Date().toISOString();
+                acc.suspendReason = 'Attempted unauthorised access to Admin Panel';
+                localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+                try { var d=localStorage.getItem('approvedAccounts')||'[]',h=5381; for(var i=0;i<d.length;i++) h=((h<<5)+h)^d.charCodeAt(i); localStorage.setItem('_ic',(h>>>0).toString(36)); } catch(e) {}
+            }
+        } catch(e) {}
+    }
+    function checkAdminAccess() {
+        var user = localStorage.getItem('loggedInUser');
+        if (!user) { window.location.href = 'Index.html'; return; }
+        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
+        if (!me) { window.location.href = 'Index.html'; return; }
+        var isAdmin = (me.access && me.access.includes('Admin')) || me.username.toLowerCase() === 'restricted';
+        if (!isAdmin) {
+            // Log violation, suspend account, sign out
+            logSecurityViolation(user, 'Admin Panel');
+            suspendAccount(user);
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+            window.location.href = 'Index.html';
+            return;
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkAdminAccess);
+    } else {
+        checkAdminAccess();
+    }
+})();
+</script>
+
+
+<script>
+/* ── HMAC INTEGRITY SYSTEM ────────────────────────────────────────────────────
+   Replaces simple djb2 checksum with HMAC-SHA256.
+   Key is stored in IndexedDB — cannot be read from localStorage or console,
+   making integrity hash impossible to forge externally.
+────────────────────────────────────────────────────────────────────────────── */
+(function(){
+    var DB_NAME = 'scp_secure', STORE = 'keys', KEY_ID = 'hmac_key';
+
+    function _openDB(cb) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE);
+        };
+        req.onsuccess = function(e) { cb(e.target.result); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _getKey(db, cb) {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(KEY_ID);
+        req.onsuccess = function(e) { cb(e.target.result || null); };
+        req.onerror = function() { cb(null); };
+    }
+
+    function _putKey(db, key, cb) {
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(key, KEY_ID);
+        tx.oncomplete = cb;
+        tx.onerror = cb;
+    }
+
+    async function _getOrCreateKey(db) {
+        return new Promise(function(resolve) {
+            _getKey(db, async function(key) {
+                if (key) { resolve(key); return; }
+                var newKey = await crypto.subtle.generateKey(
+                    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+                );
+                _putKey(db, newKey, function() { resolve(newKey); });
+            });
+        });
+    }
+
+    async function _hmac(key, data) {
+        var enc = new TextEncoder().encode(data);
+        var sig = await crypto.subtle.sign('HMAC', key, enc);
+        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // Expose HMAC-based save/verify
+    window._scpHMACReady = false;
+    window._scpHMACKey = null;
+
+    window._saveIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var mac = await _hmac(window._scpHMACKey, d);
+            localStorage.setItem('_hic', mac);
+        } catch(e) {}
+    };
+
+    window._verifyIntegrityHMAC = async function() {
+        if (!window._scpHMACKey) return true;
+        try {
+            var d = localStorage.getItem('approvedAccounts') || '[]';
+            var stored = localStorage.getItem('_hic');
+            if (!stored) return true; // first run
+            var mac = await _hmac(window._scpHMACKey, d);
+            if (mac !== stored) {
+                localStorage.removeItem('loggedInUser');
+                sessionStorage.setItem('_tamper', '1');
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+                return false;
+            }
+            return true;
+        } catch(e) { return true; }
+    };
+
+    // Initialise on page load
+    _openDB(async function(db) {
+        if (!db) return;
+        window._scpHMACKey = await _getOrCreateKey(db);
+        window._scpHMACReady = true;
+        // Verify on load
+        window._verifyIntegrityHMAC();
+    });
+
+    // Override fnFbmOHnKY to also write HMAC after every save
+    var _origSave = window.fnFbmOHnKY;
+    window.fnFbmOHnKY = function() {
+        if (_origSave) _origSave();
+        if (window._scpHMACKey) window._saveIntegrityHMAC();
+    };
+})();
+</script>
+
+
+<script>
+/* ── INSTANT TAMPER AUTO-LOGOUT ──────────────────────────────────────────────── */
+(function(){
+    // Override the base aVjArnVgxw to immediate-redirect instead of just flagging
+    var _baseVerify = window.aVjArnVgxw;
+    window.aVjArnVgxw = function() {
+        var result = _baseVerify ? _baseVerify() : true;
+        if (!result) {
+            // Already redirecting from base — ensure session is cleared first
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.clear();
+        }
+        return result;
+    };
+
+    // Also watch storage events for real-time tamper during session
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'approvedAccounts') {
+            // Recheck integrity immediately when this key changes from outside
+            setTimeout(function() {
+                if (window._verifyIntegrityHMAC) window._verifyIntegrityHMAC();
+                else if (window.aVjArnVgxw) window.aVjArnVgxw();
+            }, 100);
+        }
+        // If loggedInUser is changed from another tab, validate it matches session
+        if (e.key === 'loggedInUser') {
+            var sessionUser = sessionStorage.getItem('_scp_su');
+            if (sessionUser && e.newValue && e.newValue.toLowerCase() !== sessionUser.toLowerCase()) {
+                sessionStorage.clear();
+                window.location.href = 'Index.html';
+            }
+        }
+    });
+})();
+</script>
+
+
+<script>
+/* ── GLOBAL OZkwPRQeNH / xJRcoreogr with throttle + size caps ─────────────────────── */
+(function(){
+    if (window._scpSafeSetReady) return; // don't double-init
+    window._scpSafeSetReady = true;
+    var _throttle = {};
+    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    window.xJRcoreogr = function(key, fallback) {
+        try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+    };
+    window.OZkwPRQeNH = function(key, value) {
+        try {
+            var str = JSON.stringify(value);
+            if (str.length > 4000000) return false;
+            if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
+            var now = Date.now();
+            if (_throttle[key] && now - _throttle[key] < 150) return true;
+            _throttle[key] = now;
+            localStorage.setItem(key, str);
+            if (key === 'approvedAccounts' && window.fnFbmOHnKY) window.fnFbmOHnKY();
+            return true;
+        } catch(e) { return false; }
+    };
+})();
+</script>
+
+</head>
+<body>
+
+<script>
+/* ── SCP SECURITY v2 ─────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+// 1. ANTI-IFRAME
+if (window.self !== window.top) { window.top.location = window.self.location; return; }
+
+// 2. BLOCK DEVTOOLS SHORTCUTS
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+}, true);
+
+// 3. DISABLE RIGHT-CLICK
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 4. INTEGRITY CHECK
+const _SALT = 'scp_2026_integrity';
+function OgTpigTHKb(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(36);
+}
+function fnFbmOHnKY() {
+    try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
+}
+function aVjArnVgxw() {
+    try {
+        const d = localStorage.getItem('approvedAccounts') || '[]';
+        const stored = localStorage.getItem('_ic');
+        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
+            localStorage.removeItem('loggedInUser');
+            sessionStorage.setItem('_tamper','1');
+            window.location.href = 'Index.html';
+            return false;
+        }
+    } catch(e) {}
+    return true;
+}
+
+// 5. SESSION TOKEN VALIDATION
+function pkx9NIQ0Wo() {
+    const user = localStorage.getItem('loggedInUser');
+    const token = sessionStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su');
+    if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+        window.location.href = 'Index.html';
+        return false;
+    }
+    return true;
+}
+
+// 6. SAFE STORAGE WRAPPER — patch localStorage for this page
+const _origSetItem = localStorage.setItem.bind(localStorage);
+const _origGetItem = localStorage.getItem.bind(localStorage);
+window._safeGet = function(key, fallback) {
+    try { const r = _origGetItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
+};
+window._safeSet = function(key, value) {
+    try {
+        const str = JSON.stringify(value);
+        if (str.length > 4000000) return false;
+        _origSetItem(key, str);
+        if (key === 'approvedAccounts') fnFbmOHnKY();
+        return true;
+    } catch(e) { return false; }
+};
+
+// 7. STORAGE MUTATION OBSERVER
+// Watch for changes to approvedAccounts from outside the app
+window.addEventListener('storage', function(e) {
+    if (e.key === 'approvedAccounts' || e.key === 'loggedInUser') {
+        if (!aVjArnVgxw()) return;
+        // If loggedInUser was removed externally, redirect to login
+        if (e.key === 'loggedInUser' && !e.newValue) {
+            window.location.href = 'Index.html';
+        }
+    }
+});
+
+// 8. FREEZE OBJECT PROTOTYPE (prevent prototype pollution attacks)
+// prototype freeze removed — too destructive
+
+// 9. RUN CHECKS
+aVjArnVgxw();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pkx9NIQ0Wo);
+} else {
+    pkx9NIQ0Wo();
+}
+
+})();
+</script>
+
+<div id="header">
+    <div id="header-title">ADMIN PANEL</div>
+    <div id="header-sub">// ACCOUNT CONTROL PANEL //</div>
+</div>
+
+<div id="navbar">
+    <button class="nav-btn" onclick="window.location.href='home.html'">HOME</button>
+    <button class="nav-btn" onclick="window.location.href='files.html'">FILES</button>
+    <button class="nav-btn" onclick="window.location.href='console.html'">CONSOLE</button>
+    <button class="nav-btn" onclick="window.location.href='websites.html'">WEBSITES</button>
+    <button class="nav-btn" onclick="window.location.href='tutors.html'">TUTORS</button>
+    <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
+    <button class="nav-btn" onclick="window.location.href='lookup.html'">LOOKUP</button>
+    <button class="nav-btn active">ADMIN</button>
+    <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+</div>
+<div id="admin-content">
+
+<script>
+/* scpTheme-postload */
+(function(){
+    var t=JSON.parse(localStorage.getItem('scpTheme')||'{}');
+    if(!t.bg&&!t.accent)return;
+    function run(){
+        var h=document.getElementById('header');if(h&&t.bg)h.style.backgroundColor=t.bg;
+        var n=document.getElementById('navbar');if(n&&t.bg)n.style.backgroundColor=t.bg;
+        if(t.bg)document.body.style.backgroundColor=t.bg;
+    }
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
+</script>
+
+<!-- SYSTEM SETTINGS -->
+<div class="section-header">
+    <h2>⚙ SYSTEM SETTINGS</h2>
+</div>
+<div style="border:1px solid var(--scp-green);padding:14px 18px;margin-bottom:10px;background:#050505;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+    <div style="font-size:12px;letter-spacing:1px;color:#ddd;">
+        <b style="color:var(--scp-green-soft)">Teacher Registration Code:</b>
+        <span style="font-size:10px;color:#888;margin-left:6px;">// Used by teachers during signup</span>
+    </div>
+    <div style="position:relative;display:inline-flex;align-items:center;">
+        <input id="teacher-code-input" type="password" value="" style="padding:7px 40px 7px 12px;background:#000;border:1px solid var(--scp-green);color:var(--scp-green);font-size:13px;outline:none;min-width:180px;letter-spacing:1px;" placeholder="TEACHER CODE"/>
+        <button onclick="toggleCodeVisibility()" id="code-eye-btn" style="position:absolute;right:8px;background:none;border:none;color:var(--scp-green);cursor:pointer;font-size:14px;opacity:0.7;" title="Show/Hide">👁</button>
+    </div>
+    <button class="refresh-btn" onclick="f0ee1z6JJc()">💾 SAVE CODE</button>
+    <span id="code-save-status" style="font-size:11px;color:var(--scp-green-soft);min-width:60px;"></span>
+</div>
+
+<!-- USER LOOKUP -->
+<div class="section-header">
+    <h2>🔍 USER LOOKUP</h2>
+</div>
+<div style="border:1px solid var(--scp-green);padding:14px 18px;background:#050505;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <input id="lookup-input" style="padding:8px 12px;background:#000;border:1px solid var(--scp-green);color:var(--scp-green);font-size:12px;outline:none;min-width:200px;letter-spacing:1px;" placeholder="ENTER USERNAME..." oninput="Jae24HZKjh()"/>
+    <div id="lookup-result" style="font-size:12px;color:#ddd;letter-spacing:1px;flex:1;min-height:20px;"></div>
+</div>
+
+<!-- PENDING REQUESTS -->
+<div class="section-header">
+    <h2>PENDING ACCOUNT REQUESTS</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <button class="refresh-btn" onclick="YDzfOvz1dO()">⟳ REFRESH</button>
+        <button class="refresh-btn" id="hide-requests-btn" onclick="toggleSection('request-list','hide-requests-btn')">▲ HIDE</button>
+    </div>
+</div>
+<div id="request-list"></div>
+
+<!-- STUDENTS -->
+<div class="section-header" style="margin-top:40px;">
+    <h2>📚 STUDENT ACCOUNTS</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <input class="section-search" id="student-search" placeholder="🔍 Search students..." oninput="_debouncedLoad()"/>
+        <button class="refresh-btn" onclick="Pgyv1plBAr()">⟳ REFRESH</button>
+        <button class="refresh-btn" id="hide-students-btn" onclick="toggleSection('student-list','hide-students-btn')">▲ HIDE</button>
+    </div>
+</div>
+<div id="student-list"></div>
+
+<!-- TEACHERS -->
+<div class="section-header" style="margin-top:40px;">
+    <h2>🏫 TEACHER ACCOUNTS</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <input class="section-search" id="teacher-search" placeholder="🔍 Search teachers..." oninput="_debouncedLoad()"/>
+        <button class="refresh-btn" onclick="Pgyv1plBAr()">⟳ REFRESH</button>
+        <button class="refresh-btn" id="hide-teachers-btn" onclick="toggleSection('teacher-list','hide-teachers-btn')">▲ HIDE</button>
+    </div>
+</div>
+<div id="teacher-list"></div>
+
+<!-- SECURITY VIOLATIONS -->
+<div class="section-header" style="margin-top:40px;">
+    <h2>🚨 SECURITY VIOLATIONS</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <input class="section-search" id="violation-search" placeholder="🔍 Search violations..." oninput="W0kEnydx9q()"/>
+        <button class="refresh-btn" onclick="W0kEnydx9q()">⟳ REFRESH</button>
+        <button class="refresh-btn" id="hide-violations-btn" onclick="toggleSection('violation-list','hide-violations-btn')">▲ HIDE</button>
+    </div>
+</div>
+<div id="violation-list"></div>
+
+<!-- PENDING DELETED ACCOUNTS -->
+<div class="section-header" style="margin-top:40px;">
+    <h2>⏳ PENDING DELETED ACCOUNTS</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <input class="section-search" id="deleted-search" placeholder="🔍 Search deleted..." oninput="p2eY1gOHaf()"/>
+        <button class="refresh-btn" onclick="p2eY1gOHaf()">⟳ REFRESH</button>
+        <button class="refresh-btn" id="hide-deleted-btn" onclick="toggleSection('deleted-list','hide-deleted-btn')">▲ HIDE</button>
+    </div>
+</div>
+<div id="deleted-list"></div>
+
+<script>
+function getComputedGrade(account) {
+    if (!account || account.role === 'teacher') return null;
+    if (!account.initialGrade || !account.gradeYear) return null;
+    const g = account.initialGrade + (new Date().getFullYear() - account.gradeYear);
+    if (g > 12) return 'graduated';
+    return Math.min(g, 12);
+}
+
+function getTeacherCode() { return localStorage.getItem('scpTeacherCode') || ''; }
+
+function toggleCodeVisibility() {
+    const inp = document.getElementById('teacher-code-input');
+    const btn = document.getElementById('code-eye-btn');
+    if (inp.type === 'password') { inp.type = 'text'; btn.style.opacity = '1'; }
+    else { inp.type = 'password'; btn.style.opacity = '0.7'; }
+}
+
+function f0ee1z6JJc() {
+    const val = document.getElementById('teacher-code-input').value.trim();
+    if (!val) return;
+    localStorage.setItem('scpTeacherCode', val);
+    const s = document.getElementById('code-save-status');
+    s.innerText = '✓ Saved'; setTimeout(() => s.innerText = '', 2000);
+}
+
+function Jae24HZKjh() {
+    const q = document.getElementById('lookup-input').value.trim().toLowerCase();
+    const res = document.getElementById('lookup-result');
+    if (!q) { res.innerHTML = ''; return; }
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    const u = accounts.find(a => a.username.toLowerCase() === q);
+    if (!u) { res.innerHTML = '<span style="color:#888;">// No account found with that username //</span>'; return; }
+    const g = getComputedGrade(u);
+    const gradeStr = u.role === 'teacher' ? '🏫 Teacher' : g === 'graduated' ? '🎓 Graduated' : `Year ${g || u.initialGrade || '?'}`;
+    res.innerHTML = `<b style="color:var(--scp-green-soft)">${escapeHtml(u.name)}</b>
+        &nbsp;|&nbsp; <span style="color:#aaa">${escapeHtml(u.email || '—')}</span>
+        &nbsp;|&nbsp; <span style="color:#888;font-size:11px;">${gradeStr}</span>`;
+}
+
+function getEffectiveGrade(account) {
+    if (account.role === 'teacher') return null;
+    if (!account.initialGrade) return null;
+    const grade = account.initialGrade + (new Date().getFullYear() - account.gradeYear);
+    if (grade > 12) return 'graduated';
+    return Math.min(grade, 12);
+}
+
+function getRoleBadge(entry) {
+    if (entry.access && entry.access.includes('Admin')) return '<span style="color:#ffcc00;font-size:10px;letter-spacing:1px;border:1px solid #ffcc00;padding:1px 6px;margin-left:8px;">ADMIN</span>';
+    if (entry.role === 'teacher') return '<span style="color:#3fbf3f;font-size:10px;letter-spacing:1px;border:1px solid #3fbf3f;padding:1px 6px;margin-left:8px;">TEACHER</span>';
+    const g = getEffectiveGrade(entry);
+    if (g === 'graduated') return '<span style="color:#6fdc6f;font-size:10px;letter-spacing:1px;border:1px solid #6fdc6f;padding:1px 6px;margin-left:8px;">GRADUATED</span>';
+    if (g) return `<span style="color:#6fdc6f;font-size:10px;letter-spacing:1px;border:1px solid #555;padding:1px 6px;margin-left:8px;">YEAR ${g}</span>`;
+    return '<span style="color:#888;font-size:10px;letter-spacing:1px;border:1px solid #555;padding:1px 6px;margin-left:8px;">STUDENT</span>';
+}
+
+function safeArray(v) { return Array.isArray(v) ? v : []; }
+function getGroups() { return JSON.parse(localStorage.getItem("scpGroups")) || []; }
+function saveGroups(g) { localStorage.setItem("scpGroups", JSON.stringify(g)); }
+
+function ensureSystemGroups(username) {
+    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    const user = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+    const role = user ? user.role : 'student';
+    const isTeacher = role === 'teacher';
+    const isStudent = !isTeacher;
+    let groups = getGroups();
+    let welcome = groups.find(g => g.id === 'permanent_welcome');
+    if (!welcome) { welcome = { id: 'permanent_welcome', name: 'Welcome', members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType: 'all' }; groups.push(welcome); }
+    if (!welcome.members.map(x => x.toLowerCase()).includes(username.toLowerCase())) welcome.members.push(username);
+    let studentsGroup = groups.find(g => g.id === 'permanent_students');
+    if (!studentsGroup) { studentsGroup = { id: 'permanent_students', name: 'Students', members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType: 'students' }; groups.push(studentsGroup); }
+    if (isStudent && !studentsGroup.members.map(x => x.toLowerCase()).includes(username.toLowerCase())) studentsGroup.members.push(username);
+    let teachersGroup = groups.find(g => g.id === 'permanent_teachers');
+    if (!teachersGroup) { teachersGroup = { id: 'permanent_teachers', name: 'Teachers', members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType: 'teachers' }; groups.push(teachersGroup); }
+    if (isTeacher && !teachersGroup.members.map(x => x.toLowerCase()).includes(username.toLowerCase())) teachersGroup.members.push(username);
+    saveGroups(groups);
+}
+
+function YDzfOvz1dO() {
+    let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
+    const list = document.getElementById("request-list");
+    list.innerHTML = "";
+    if (pending.length === 0) { list.innerHTML = '<div class="empty-msg">// NO PENDING REQUESTS //</div>'; return; }
+    pending.forEach((entry, index) => {
+        const div = document.createElement("div");
+        div.className = "request-item";
+        div.innerHTML = `
+            <div>
+                <div><b>Name:</b> ${escapeHtml(entry.name)}</div>
+                <div><b>Username:</b> ${escapeHtml(entry.username)}</div>
+                <div><b>Email:</b> ${escapeHtml(entry.email || "—")}</div>
+                ${_currentUserIsRestricted ? `<div><b>Password:</b> <span style="color:#888;font-family:monospace;font-size:11px;">${escapeHtml(entry.password || '—')}</span></div>` : ''}
+                <div><b>Role:</b> ${entry.role === 'teacher' ? '🏫 TEACHER' : `📚 STUDENT – Year ${entry.initialGrade || '?'}`}</div>
+            </div>
+            <div>
+                <button class="admin-btn allow" onclick="PCqpIqK3yn(${index})">▶ ALLOW</button>
+                <button class="admin-btn iFfcgMXAdx-btn" onclick="iFfcgMXAdx(${index})">✕ DENY</button>
+            </div>`;
+        list.appendChild(div);
+    });
+}
+
+
+// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+
+// ── XSS PROTECTION ───────────────────────────────────────────────────────────
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+
+// ── PASSWORD HASH HELPER ──────────────────────────────────────────────────────
+async function wLYTH8xIZM(pw) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'scp_pw_2026'));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+// Track whether the current viewer is the Restricted superadmin
+var _currentUserIsRestricted = (localStorage.getItem('loggedInUser') || '').toLowerCase() === 'restricted';
+
+function auditLog(action, target) {
+    try {
+        var logs = JSON.parse(localStorage.getItem('scpAuditLog') || '[]');
+        var adminUser = localStorage.getItem('loggedInUser') || 'unknown';
+        logs.push({ time: new Date().toISOString(), admin: adminUser, action: action, target: target });
+        if (logs.length > 500) logs = logs.slice(logs.length - 500); // keep last 500
+        localStorage.setItem('scpAuditLog', JSON.stringify(logs));
+    } catch(e) {}
+}
+
+// Sanitize search inputs against injection
+function sanitizeSearch(str) {
+    return String(str).replace(/[<>"'`\\]/g, '').toLowerCase().trim().slice(0, 100);
+}
+
+function Pgyv1plBAr() {
+    let accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    const studentQ = sanitizeSearch(document.getElementById('student-search').value || '');
+    const teacherQ = sanitizeSearch(document.getElementById('teacher-search').value || '');
+
+    let students = accounts.filter(a => a.role !== 'teacher' && a.username.toLowerCase() !== 'restricted');
+    let teachers = accounts.filter(a => a.role === 'teacher');
+
+    if (studentQ) students = students.filter(a =>
+        (a.username||'').toLowerCase().includes(studentQ) ||
+        (a.name||'').toLowerCase().includes(studentQ) ||
+        (a.email||'').toLowerCase().includes(studentQ)
+    );
+    if (teacherQ) teachers = teachers.filter(a =>
+        (a.username||'').toLowerCase().includes(teacherQ) ||
+        (a.name||'').toLowerCase().includes(teacherQ) ||
+        (a.email||'').toLowerCase().includes(teacherQ)
+    );
+
+    const studentEl = document.getElementById("student-list");
+    const teacherEl = document.getElementById("teacher-list");
+
+    if (students.length === 0) studentEl.innerHTML = '<div class="empty-msg">// NO STUDENT ACCOUNTS' + (studentQ ? ' MATCHING SEARCH' : '') + ' //</div>';
+    else renderAccountList(students, studentEl, accounts, false);
+
+    if (teachers.length === 0) teacherEl.innerHTML = '<div class="empty-msg">// NO TEACHER ACCOUNTS' + (teacherQ ? ' MATCHING SEARCH' : '') + ' //</div>';
+    else renderAccountList(teachers, teacherEl, accounts, true);
+}
+
+function c1eoPni6JD(index) {
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+    if (!accounts[index]) return;
+    accounts[index].hidden = !accounts[index].hidden;
+    localStorage.setItem('approvedAccounts', JSON.stringify(accounts));
+    Pgyv1plBAr();
+}
+
+function isSpecialAccount(entry) {
+    return entry.name.toLowerCase() === 'test' ||
+           entry.username.toLowerCase() === 'test' ||
+           false /* personal email removed */;
+}
+
+function renderAccountList(subset, listEl, allAccounts, isTeacherList = false) {
+    listEl.innerHTML = "";
+    subset.forEach(entry => {
+        const index = allAccounts.indexOf(entry);
+        entry.access = safeArray(entry.access);
+        entry.favorite = entry.favorite === true;
+        entry.redacted = entry.redacted === true;
+        entry.hidden = entry.hidden !== false; // default to true (hidden)
+        const special = isSpecialAccount(entry);
+        const canDelete = !entry.favorite || special;
+        const computedGrade = getComputedGrade(entry);
+        const gradeDisplay = entry.role === 'teacher' ? '🏫 Teacher'
+            : computedGrade === 'graduated' ? '🎓 Graduated'
+            : `📚 Year ${computedGrade || entry.initialGrade || '?'}`;
+
+        const div = document.createElement("div");
+        div.className = "account-item" + (special ? " special-account" : "");
+        div.innerHTML = `
+            <div class="account-info-top">
+                <div><b>Name:</b> ${escapeHtml(entry.name)} ${getRoleBadge(entry)}</div>
+                <div><b>Username:</b> ${entry.redacted ? '<span style="color:var(--scp-orange)">Redacted</span>' : escapeHtml(entry.username)}</div>
+                <div><b>Email:</b> ${escapeHtml(entry.email || "—")}</div>
+                ${_currentUserIsRestricted ? `<div><b>Password:</b> <span style="color:#888;font-family:monospace;font-size:11px;">${entry.hidden ? '****' : escapeHtml(entry.password || '—')}</span> <button onclick="c1eoPni6JD(${index})" style="background:transparent;border:1px solid #333;color:#555;font-size:9px;padding:1px 5px;cursor:pointer;letter-spacing:1px;">👁</button></div>` : ''}
+                <div><b>Role:</b> ${gradeDisplay}</div>
+                <div><b>Access:</b> ${escapeHtml(entry.access.join(", ") || "None")}</div>
+            </div>
+            <div class="account-controls-row">
+                <span class="star-btn ${entry.favorite ? "star-on" : "star-off"}" onclick="UEeVVhDIq2(${index})">★</span>
+                ${makeAccessBtn(entry, index, "Files")}
+                ${isTeacherList ? "" : makeAccessBtn(entry, index, "Hacks")}
+                ${makeAccessBtn(entry, index, "Console")}
+                ${makeAccessBtn(entry, index, "Websites")}
+                ${makeAccessBtn(entry, index, "Tutors")}
+                ${makeAccessBtn(entry, index, "Messages")}
+                ${makeAccessBtn(entry, index, "Admin", "📢")}
+                ${!isTeacherList ? `
+                    <button class="admin-btn ${entry.redacted ? 'orange-on' : 'orange-off'}" onclick="B75UQSyPx3(${index})">
+                        📛 ${entry.redacted ? "UNREDACT" : "REDACT"}
+                    </button>
+                    <button class="admin-btn ${entry.hidden ? 'orange-on' : 'orange-off'}" onclick="ChnuKoneNo(${index})">
+                        🔑 ${entry.hidden ? "SHOW PASS" : "HIDE PASS"}
+                    </button>` : ''}
+                <button class="admin-btn delete ${canDelete ? "" : "disabled"}"
+                        onclick="${canDelete ? `DG81aSQHqN(${index})` : ""}">DELETE</button>
+            </div>`;
+        listEl.appendChild(div);
+    });
+}
+
+function makeAccessBtn(entry, index, role, prefix = "") {
+    const active = entry.access.includes(role);
+    // Restricted account's Admin button is permanently locked
+    if (entry.username.toLowerCase() === 'restricted' && role === 'Admin') {
+        return `<button class="access-btn access-on" style="opacity:0.5;cursor:not-allowed;" title="Restricted account always has Admin access">🔒 Admin</button>`;
+    }
+    return `<button class="access-btn ${active ? "access-on" : "access-off"}" onclick="cXye4JSnE2(${index}, '${role}')">${prefix ? prefix + " " : ""}${role}</button>`;
+}
+
+function UEeVVhDIq2(index) {
+    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    a[index].favorite = !a[index].favorite;
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
+    Pgyv1plBAr();
+}
+
+function B75UQSyPx3(index) {
+    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    a[index].redacted = !a[index].redacted;
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
+    location.reload();
+}
+
+function ChnuKoneNo(index) {
+    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    a[index].hidden = !a[index].hidden;
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
+    location.reload();
+}
+
+function cXye4JSnE2(index, role) {
+    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    // Restricted account can never lose Admin access
+    if (a[index].username.toLowerCase() === 'restricted' && role === 'Admin') return;
+    a[index].access = safeArray(a[index].access);
+    if (a[index].access.includes(role)) {
+        a[index].access = a[index].access.filter(r => r !== role);
+    } else {
+        a[index].access.push(role);
+    }
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
+    Pgyv1plBAr();
+}
+
+function PCqpIqK3yn(index) {
+    let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
+    let accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    const u = pending[index];
+    accounts.push({
+        name: u.name, username: u.username, email: u.email || "",
+        password: u.password, role: u.role || 'student',
+        initialGrade: u.initialGrade || null, gradeYear: u.gradeYear || null,
+        access: ["Files", "Hacks", "Console", "Websites", "Tutors", "Messages"],
+        favorite: false, redacted: false, hidden: true
+    });
+    pending.splice(index, 1);
+    localStorage.setItem("pendingAccounts", JSON.stringify(pending));
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
+    ensureSystemGroups(u.username);
+    let delList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
+    delList = delList.filter(d => d.username.toLowerCase() !== u.username.toLowerCase());
+    localStorage.setItem("deletedAccounts", JSON.stringify(delList));
+    YDzfOvz1dO(); Pgyv1plBAr(); p2eY1gOHaf();
+}
+
+function iFfcgMXAdx(index) {
+    let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
+    pending.splice(index, 1);
+    localStorage.setItem("pendingAccounts", JSON.stringify(pending));
+    YDzfOvz1dO();
+}
+
+function DG81aSQHqN(index) {
+    let accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
+    if (accounts[index]) auditLog('DELETE_ACCOUNT', accounts[index].username);
+    const deleted = accounts[index];
+    const deletedUsername = deleted.username.toLowerCase();
+
+    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
+    // Store full info for pending deleted accounts
+    deletedList.push({
+        username: deleted.username,
+        name: deleted.name || '',
+        email: deleted.email || '',
+        role: deleted.role || 'student',
+        deletedAt: Date.now(),
+        deletedBy: 'admin'
+    });
+    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+
+    let groups = getGroups();
+    groups.forEach(g => { g.members = g.members.filter(m => m.toLowerCase() !== deletedUsername); });
+    saveGroups(groups);
+
+    let msgs = JSON.parse(localStorage.getItem("scpMessages")) || [];
+    msgs = msgs.filter(m => {
+        if (m.groupId) return true;
+        return !(m.from && m.from.toLowerCase() === deletedUsername) && !(m.to && m.to.toLowerCase() === deletedUsername);
+    });
+    localStorage.setItem("scpMessages", JSON.stringify(msgs));
+
+    const convs = (JSON.parse(localStorage.getItem("scpDMConvs")) || []).filter(c => !c.includes(deletedUsername));
+    localStorage.setItem("scpDMConvs", JSON.stringify(convs));
+
+    accounts.splice(index, 1);
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
+    Pgyv1plBAr(); p2eY1gOHaf();
+}
+
+function p2eY1gOHaf() {
+    const q = (document.getElementById('deleted-search').value || '').toLowerCase();
+    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
+    if (q) deletedList = deletedList.filter(e =>
+        (e.username||'').toLowerCase().includes(q) ||
+        (e.name||'').toLowerCase().includes(q) ||
+        (e.email||'').toLowerCase().includes(q)
+    );
+    const listEl = document.getElementById("deleted-list");
+    if (!listEl) return;
+    if (deletedList.length === 0) {
+        listEl.innerHTML = '<div class="empty-msg">// NO PENDING DELETED ACCOUNTS' + (q ? ' MATCHING SEARCH' : '') + ' //</div>';
+        return;
+    }
+    listEl.innerHTML = "";
+    deletedList.forEach((entry, i) => {
+        const div = document.createElement("div");
+        div.className = "deleted-item";
+        const when = entry.deletedAt ? new Date(entry.deletedAt).toLocaleDateString() : '—';
+        const by = entry.deletedBy === 'self' ? 'Self-deleted' : entry.deletedBy === 'admin' ? 'Admin deleted' : '—';
+        div.innerHTML = `
+            <div>
+                <div><b>Username:</b> ${entry.username}</div>
+                ${entry.name ? `<div><b>Name:</b> ${entry.name}</div>` : ''}
+                ${entry.email ? `<div><b>Email:</b> ${entry.email}</div>` : ''}
+                <div style="font-size:10px;color:#888;margin-top:4px;">${by} · ${when} · Login attempts: ${entry.attempts || 0}/3</div>
+            </div>
+            <div class="account-controls">
+                <button class="admin-btn allow" onclick="OsNLjVHWGa(${i})">↩ RECOVER</button>
+                <button class="admin-btn iFfcgMXAdx-btn" onclick="uEgw9YooJe(${i})">✕ PURGE</button>
+            </div>`;
+        listEl.appendChild(div);
+    });
+}
+
+function OsNLjVHWGa(index) {
+    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
+    deletedList.splice(index, 1);
+    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+    p2eY1gOHaf();
+}
+
+function uEgw9YooJe(index) {
+    if (!confirm("Permanently remove this deleted account record?")) return;
+    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
+    deletedList.splice(index, 1);
+    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
+    p2eY1gOHaf();
+}
+
+
+// ── SECURITY VIOLATIONS ───────────────────────────────────────────────────────
+function W0kEnydx9q() {
+    const q = (document.getElementById('violation-search').value || '').toLowerCase();
+    const violations = JSON.parse(localStorage.getItem('scpSecurityViolations') || '[]');
+    const accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+    const listEl = document.getElementById('violation-list');
+    if (!listEl) return;
+
+    // Collect suspended accounts
+    const suspended = accounts.filter(a => a.suspended && a.username.toLowerCase() !== 'restricted');
+
+    // Merge: show each suspended account with their violation entries
+    let entries = suspended.map(acc => {
+        const accViolations = violations.filter(v => v.username.toLowerCase() === acc.username.toLowerCase());
+        return { acc, accViolations };
+    });
+
+    // Also show violations for non-suspended accounts (already reactivated but still have a record)
+    const suspendedNames = suspended.map(a => a.username.toLowerCase());
+    const otherViolations = violations.filter(v => !suspendedNames.includes(v.username.toLowerCase()));
+    // Group by username
+    const otherMap = {};
+    otherViolations.forEach(v => {
+        const k = v.username.toLowerCase();
+        if (!otherMap[k]) otherMap[k] = [];
+        otherMap[k].push(v);
+    });
+
+    if (q) {
+        entries = entries.filter(e =>
+            e.acc.username.toLowerCase().includes(q) ||
+            e.acc.name.toLowerCase().includes(q) ||
+            e.accViolations.some(v => (v.page||'').toLowerCase().includes(q))
+        );
+    }
+
+    if (entries.length === 0 && Object.keys(otherMap).length === 0) {
+        listEl.innerHTML = '<div class="empty-msg">// NO SECURITY VIOLATIONS //</div>';
+        return;
+    }
+
+    listEl.innerHTML = '';
+
+    // Render suspended accounts
+    entries.forEach(({ acc, accViolations }) => {
+        const index = accounts.indexOf(acc);
+        const div = document.createElement('div');
+        div.className = 'account-item';
+        div.style.borderColor = '#ff3f3f';
+        div.style.boxShadow = '0 0 8px rgba(255,63,63,0.2)';
+
+        const violationLog = accViolations.length > 0
+            ? accViolations.map(v =>
+                `<div style="font-size:11px;color:#ff9999;margin-top:2px;">
+                    ⚠ Tried to access <b>${escapeHtml(v.page || 'unknown')}</b>
+                    <span style="color:#555;margin-left:8px;">${new Date(v.time).toLocaleString()}</span>
+                </div>`
+            ).join('')
+            : '<div style="font-size:11px;color:#555;">No violation details recorded</div>';
+
+        div.innerHTML = `
+            <div class="account-info-top">
+                <div><b>Name:</b> ${escapeHtml(acc.name)} ${getRoleBadge(acc)}</div>
+                <div><b>Username:</b> ${escapeHtml(acc.username)}</div>
+                <div><b>Email:</b> ${escapeHtml(acc.email || '—')}</div>
+                <div style="margin-top:6px;padding-top:6px;border-top:1px solid #2a0000;">
+                    <b style="color:#ff3f3f;">Violations:</b>
+                    ${violationLog}
+                </div>
+                ${acc.suspendReason ? `<div style="font-size:11px;color:#ff3f3f;margin-top:4px;">⛔ Suspended: ${escapeHtml(acc.suspendReason)}</div>` : ''}
+                ${acc.suspendedAt ? `<div style="font-size:11px;color:#555;">At: ${new Date(acc.suspendedAt).toLocaleString()}</div>` : ''}
+            </div>
+            <div class="account-controls-row">
+                <button class="admin-btn" style="border-color:#3fbf3f;color:#3fbf3f;box-shadow:0 0 4px #3fbf3f;"
+                    onclick="hsjaSS8VFg(${index})">✅ REACTIVATE</button>
+                <button class="admin-btn delete" onclick="DG81aSQHqN(${index})">DELETE</button>
+            </div>`;
+        listEl.appendChild(div);
+    });
+}
+
+function hsjaSS8VFg(index) {
+    let accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
+    if (!accounts[index]) return;
+    auditLog('REACTIVATE_ACCOUNT', accounts[index].username);
+    accounts[index].suspended = false;
+    delete accounts[index].suspendedAt;
+    delete accounts[index].suspendReason;
+    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
+    W0kEnydx9q();
+    Pgyv1plBAr();
+}
+
+// ── AUDIT LOG (stub — kept for compatibility) ─────────────────────────────────
+function loadAuditLog() { /* intentionally empty — violations section replaces this */ }
+
+
+// ── SECTION HIDE/SHOW TOGGLE ──────────────────────────────────────────────────
+function toggleSection(listId, btnId) {
+    const list = document.getElementById(listId);
+    const btn  = document.getElementById(btnId);
+    if (!list || !btn) return;
+    const hidden = list.style.display === 'none';
+    list.style.display = hidden ? '' : 'none';
+    btn.innerText = hidden ? '▲ HIDE' : '▼ SHOW';
+}
+
+// ── DEBOUNCE UTILITY ──────────────────────────────────────────────────────────
+function _debounce(fn, delay) {
+    var timer;
+    return function() {
+        var args = arguments, ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+}
+var _debouncedLoad = _debounce(Pgyv1plBAr, 200);
+
+YDzfOvz1dO();
+Pgyv1plBAr();
+p2eY1gOHaf();
+W0kEnydx9q();
+loadAuditLog();
+document.getElementById('teacher-code-input').value = getTeacherCode();
+</script>
+</div>
+</body>
+</html>
