@@ -340,9 +340,9 @@ window.onload = function() {
     const username = localStorage.getItem('loggedInUser');
     if (!username) { window.location.href = 'Index.html'; return; }
     currentUser = username;
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
-    currentUserData = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
-    if (!currentUserData || !Array.isArray(currentUserData.access) || !currentUserData.access.includes('Hacks')) {
+    const _access = JSON.parse(localStorage.getItem('_scp_access') || '[]');
+    currentUserData = { username, access: _access };
+    if (!_access.includes('Hacks') && username.toLowerCase() !== 'restricted') {
         document.getElementById('main').innerHTML = '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
         return;
     }

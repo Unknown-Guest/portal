@@ -561,6 +561,7 @@ window.addEventListener('unhandledrejection', function(e) {
 </script>
 
 <script src="db.js"></script>
+<script src="scp_supabase.js"></script>
 </head>
 <body>
 
@@ -685,9 +686,8 @@ if (document.readyState === 'loading') {
 (function(){
   var u=localStorage.getItem('loggedInUser');
   if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var acc=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var isA=acc.includes('Admin');
   var isR=u.toLowerCase()==='restricted';
   if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
 })();
@@ -765,7 +765,7 @@ function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 }
-function doSearch() {
+async function doSearch() {
     const q = document.getElementById('search-input').value.trim().toLowerCase();
     const resultBox = document.getElementById('result-box');
     const notFound = document.getElementById('not-found');
@@ -773,8 +773,8 @@ function doSearch() {
     notFound.classList.remove('show');
     if (!q) return;
 
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
-    const u = accounts.find(a => a.username.toLowerCase() === q && a.username.toLowerCase() !== 'restricted');
+    const _allAccts = await dbGetAccounts();
+    const u = _allAccts.find(a => a.username.toLowerCase() === q && a.username.toLowerCase() !== 'restricted');
     if (!u) { notFound.classList.add('show'); return; }
 
     document.getElementById('r-name').innerText     = u.name || '—';
@@ -785,9 +785,9 @@ function doSearch() {
     resultBox.classList.add('show');
 }
 
-function tw58cwQPvI() {
+async function tw58cwQPvI() {
     const q = (document.getElementById('filter-input').value || '').toLowerCase().trim();
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
+    const accounts = await dbGetAccounts();
     let students = accounts.filter(a => a.role !== 'teacher' && a.username.toLowerCase() !== 'restricted');
     if (q) students = students.filter(a =>
         (a.name||'').toLowerCase().includes(q) ||
@@ -822,33 +822,17 @@ window.onload = async function() { if(window.DB) await DB._initPromise;
     const user = localStorage.getItem('loggedInUser');
     if (!user) { window.location.href = 'Index.html'; return; }
 
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
-    const account = accounts.find(a => a.username.toLowerCase() === user.toLowerCase());
-
-    // Only teachers and admins can access this page
-    const isTeacher = account && account.role === 'teacher';
-    const isAdmin   = account && Array.isArray(account.access) && account.access.includes('Admin');
+    const _access = JSON.parse(localStorage.getItem('_scp_access') || '[]');
+    const _role = localStorage.getItem('_scp_role') || 'student';
     const isRestricted = user.toLowerCase() === 'restricted';
+    const isTeacher = _role === 'teacher';
+    const isAdmin = _access.includes('Admin');
 
-    if (!account || (!isTeacher && !isAdmin && !isRestricted)) {
-        // Log violation, suspend account, sign out
-        (function() {
-            try {
-                var violations = JSON.parse(localStorage.getItem('scpSecurityViolations') || '[]');
-                violations.push({ username: user, page: 'Lookup Panel', time: new Date().toISOString(), ua: navigator.userAgent.slice(0, 80) });
-                localStorage.setItem('scpSecurityViolations', JSON.stringify(violations));
-            } catch(e) {}
-            try {
-                var accs = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-                var target = accs.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
-                if (target && user.toLowerCase() !== 'restricted') {
-                    target.suspended = true;
-                    target.suspendedAt = new Date().toISOString();
-                    target.suspendReason = 'Attempted unauthorised access to Lookup Panel';
-                    localStorage.setItem('approvedAccounts', JSON.stringify(accs));
-                    try { var d=localStorage.getItem('approvedAccounts')||'[]',h=5381; for(var i=0;i<d.length;i++) h=((h<<5)+h)^d.charCodeAt(i); localStorage.setItem('_ic',(h>>>0).toString(36)); } catch(e) {}
-                }
-            } catch(e) {}
+    if (!isTeacher && !isAdmin && !isRestricted) {
+        // Log violation via Supabase and redirect
+        (async function() {
+            try { await dbLogViolation(user, 'UNAUTHORIZED_ACCESS', 'Attempted access to Lookup Panel'); } catch(e) {}
+            try { await dbUpdateAccount(user, { suspended: true, suspend_reason: 'Attempted unauthorised access to Lookup Panel' }); } catch(e) {}
             localStorage.removeItem('loggedInUser');
             sessionStorage.clear();
         })();
@@ -857,13 +841,6 @@ window.onload = async function() { if(window.DB) await DB._initPromise;
     }
 
     tw58cwQPvI();
-
-    if (window.DB) {
-        DB.onKVChange('approvedAccounts', function() {
-            var q = document.getElementById('search-input');
-            if(q && q.value) doSearch();
-        });
-    }
 };
 </script>
 

@@ -759,9 +759,8 @@ if (document.readyState === 'loading') {
 (function(){
   var u=localStorage.getItem('loggedInUser');
   if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var acc=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var isA=acc.includes('Admin');
   var isR=u.toLowerCase()==='restricted';
   if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
 })();
@@ -950,22 +949,16 @@ if (document.readyState === 'loading') {
 <script>
 let currentUser = "";
 
-function getAccount() {
-    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    return accounts.find(a => a.username.toLowerCase() === currentUser.toLowerCase());
+async function getAccount() {
+    return await dbGetAccount(currentUser);
 }
 
-function saveAccount(updated) {
-    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const i = accounts.findIndex(a => a.username.toLowerCase() === currentUser.toLowerCase());
-    if (i === -1) return false;
-    accounts[i] = updated;
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
-    return true;
+async function saveAccount(updates) {
+    return await dbUpdateAccount(currentUser, updates);
 }
 
-function loadDetails() {
-    const a = getAccount();
+async function loadDetails() {
+    const a = await getAccount();
     if (!a) return;
     document.getElementById("disp-name").innerText = a.name || "—";
     document.getElementById("disp-username").innerText = a.username || "—";
@@ -980,15 +973,12 @@ function setStatus(id, msg, ok) {
     if (ok) setTimeout(() => el.innerText = "", 3000);
 }
 
-function changeName() {
+async function changeName() {
     const val = document.getElementById("new-name").value.trim();
     if (!val) { setStatus("name-status", "Please enter a name.", false); return; }
-    const a = getAccount();
-    if (!a) return;
-    a.name = val;
-    saveAccount(a);
+    await saveAccount({ name: val });
     document.getElementById("new-name").value = "";
-    loadDetails();
+    await loadDetails();
     setStatus("name-status", "✓ Name updated.", true);
 }
 
@@ -1036,19 +1026,19 @@ async function changeUsername() {
     setStatus("username-status", "✓ Username updated.", true);
 }
 
-function YWrRTWPEln() {
+async function YWrRTWPEln() {
     const pass = document.getElementById("email-password").value;
     const val = document.getElementById("new-email").value.trim();
     if (!pass) { setStatus("email-status", "Please enter your current password.", false); return; }
     if (!val || !val.includes("@") || !val.includes(".")) { setStatus("email-status", "Please enter a valid email.", false); return; }
-    const a = getAccount();
+    const a = await getAccount();
     if (!a) return;
-    if (a.password !== pass) { setStatus("email-status", "Incorrect password.", false); return; }
-    a.email = val;
-    saveAccount(a);
+    const hashedPass = await wLYTH8xIZM(pass);
+    if (a.password !== hashedPass) { setStatus("email-status", "Incorrect password.", false); return; }
+    await saveAccount({ email: val });
     document.getElementById("new-email").value = "";
     document.getElementById("email-password").value = "";
-    loadDetails();
+    await loadDetails();
     setStatus("email-status", "✓ Email updated.", true);
 }
 
@@ -1058,30 +1048,24 @@ async function wLYTH8xIZM(pw) {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-async function dJHUdKF0j7() {
-    const newPw = document.getElementById('new-password').value.trim();
-    if (!newPw || newPw.length < 5) { setStatus('password-status', '✗ Minimum 5 characters required.', false); return; }
+async async function dJHUdKF0j7() {
     const oldPass = document.getElementById("old-password").value;
     const newPass = document.getElementById("new-password").value;
     const confirmPass = document.getElementById("confirm-password").value;
-
     if (!oldPass || !newPass || !confirmPass) { setStatus("password-status", "Please fill all fields.", false); return; }
-    const a = getAccount();
-    if (!a) return;
-
-    // Only compare hashed — no plaintext fallback
-    const hashedOld = await wLYTH8xIZM(oldPass);
-    if (a.password !== hashedOld) { setStatus("password-status", "Current password is incorrect.", false); return; }
     if (newPass.length < 5) { setStatus("password-status", "Minimum 5 characters.", false); return; }
     if (newPass !== confirmPass) { setStatus("password-status", "New passwords do not match.", false); return; }
 
-    // Store new password as hash
-    a.password = await wLYTH8xIZM(newPass);
-    saveAccount(a);
+    const a = await getAccount();
+    if (!a) return;
+    const hashedOld = await wLYTH8xIZM(oldPass);
+    if (a.password !== hashedOld) { setStatus("password-status", "Current password is incorrect.", false); return; }
+
+    const hashedNew = await wLYTH8xIZM(newPass);
+    await saveAccount({ password: hashedNew });
     document.getElementById("old-password").value = "";
     document.getElementById("new-password").value = "";
     document.getElementById("confirm-password").value = "";
-    loadDetails();
     setStatus("password-status", "✓ Password updated.", true);
 }
 
@@ -1180,57 +1164,28 @@ function loadThemePickers() {
     if (t.bg || t.accent) applyThemeNow(t.bg || '#000000', t.accent || '#3fbf3f');
 }
 
-function confirmDeleteAccount() {
-    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const userEntry = accounts.find(a => a.username.toLowerCase() === currentUser);
-    const filtered = accounts.filter(a => a.username.toLowerCase() !== currentUser);
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', filtered);
-
-    // Add to deleted list with full info so admin panel shows it
-    const deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
-    deletedList.push({
-        username: userEntry ? userEntry.username : currentUser,
-        name: userEntry ? userEntry.name || '' : '',
-        email: userEntry ? userEntry.email || '' : '',
-        role: userEntry ? userEntry.role || 'student' : 'student',
-        deletedAt: Date.now(),
-        deletedBy: 'self'
-    });
-    localStorage.setItem("deletedAccounts", JSON.stringify(deletedList));
-
-    // Remove from all group member lists (permanent groups just silently remove them)
-    let groups = JSON.parse(localStorage.getItem("scpGroups")) || [];
-    groups.forEach(g => { g.members = g.members.filter(m => m.toLowerCase() !== currentUser); });
-    localStorage.setItem("scpGroups", JSON.stringify(groups));
-
-    // Delete all DM messages involving this user (group messages stay)
-    let msgs = JSON.parse(localStorage.getItem("scpMessages")) || [];
-    msgs = msgs.filter(m => {
-        if (m.groupId) return true;
-        const fromMe = m.from && m.from.toLowerCase() === currentUser;
-        const toMe = m.to && m.to.toLowerCase() === currentUser;
-        return !fromMe && !toMe;
-    });
-    localStorage.setItem("scpMessages", JSON.stringify(msgs));
-
-    // Remove tracked DM convs involving this user
-    const convs = (JSON.parse(localStorage.getItem("scpDMConvs")) || []).filter(c => !c.includes(currentUser));
-    localStorage.setItem("scpDMConvs", JSON.stringify(convs));
-
+async function confirmDeleteAccount() {
+    // Remove from all groups in Supabase
+    const allGroups = await dbGetAllGroups();
+    for (const g of allGroups) {
+        if (Array.isArray(g.members) && g.members.some(m => m.toLowerCase() === currentUser)) {
+            await dbUpdateGroup(g.id, { members: g.members.filter(m => m.toLowerCase() !== currentUser) });
+        }
+    }
+    // Soft-delete the account in Supabase
+    await dbDeleteAccount(currentUser);
     localStorage.removeItem("loggedInUser");
+    localStorage.removeItem("_scp_access");
+    localStorage.removeItem("_scp_role");
+    sessionStorage.clear();
     window.location.href = "Index.html";
 }
 
-window.onload = async function() { if(window.DB) await DB._initPromise;
-
+window.onload = async function() {
     const user = localStorage.getItem("loggedInUser");
-    if (!user) { window.location.href = "Index.html"; return; }
+    if (!user || !sessionStorage.getItem('_scp_st')) { window.location.href = "Index.html"; return; }
     currentUser = user.toLowerCase();
-    (function() {
-        const accts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-        const u = accts.find(a => a.username && a.username.toLowerCase() === user.toLowerCase());
-    })();
-    loadDetails();
+    await loadDetails();
     loadThemePickers();
     updateStorageUsage();
 };

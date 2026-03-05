@@ -591,10 +591,10 @@ if (document.readyState === 'loading') {
 (function(){
   var u=localStorage.getItem('loggedInUser');
   if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isT=me&&me.role==='teacher';
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var acc=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var role=localStorage.getItem('_scp_role')||'student';
+  var isT=role==='teacher';
+  var isA=acc.includes('Admin');
   var isR=u.toLowerCase()==='restricted';
   if(isT||isA||isR){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
 })();
@@ -605,9 +605,8 @@ if (document.readyState === 'loading') {
 (function(){
   var u=localStorage.getItem('loggedInUser');
   if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var acc=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var isA=acc.includes('Admin');
   var isR=u.toLowerCase()==='restricted';
   if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
 })();
@@ -882,9 +881,9 @@ window.onload = async function() { if(window.DB) await DB._initPromise;
     const username = localStorage.getItem('loggedInUser');
     if (!username) { window.location.href = 'Index.html'; return; }
     currentUser = username;
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
-    currentUserData = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
-    if (!currentUserData || !Array.isArray(currentUserData.access) || !currentUserData.access.includes('Websites')) {
+    const _access = JSON.parse(localStorage.getItem('_scp_access') || '[]');
+    currentUserData = { username, access: _access };
+    if (!_access.includes('Websites') && username.toLowerCase() !== 'restricted') {
         document.getElementById('main').innerHTML = '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
         return;
     }

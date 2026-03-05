@@ -637,10 +637,10 @@ if (document.readyState === 'loading') {
 (function(){
   var u=localStorage.getItem('loggedInUser');
   if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isT=me&&me.role==='teacher';
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var acc=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var role=localStorage.getItem('_scp_role')||'student';
+  var isT=role==='teacher';
+  var isA=acc.includes('Admin');
   var isR=u.toLowerCase()==='restricted';
   if(isT||isA||isR){var b=document.getElementById('lookup-nav-btn');if(b)b.style.display='';}
 })();
@@ -651,9 +651,8 @@ if (document.readyState === 'loading') {
 (function(){
   var u=localStorage.getItem('loggedInUser');
   if(!u)return;
-  var a=JSON.parse(localStorage.getItem('approvedAccounts')||'[]');
-  var me=a.find(function(x){return x.username&&x.username.toLowerCase()===u.toLowerCase();});
-  var isA=me&&Array.isArray(me.access)&&me.access.includes('Admin');
+  var acc=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+  var isA=acc.includes('Admin');
   var isR=u.toLowerCase()==='restricted';
   if(isA||isR){var b=document.getElementById('admin-nav-btn');if(b)b.style.display='';}
 })();
@@ -1335,9 +1334,8 @@ window.onload = async function() { if(window.DB) await DB._initPromise;
 
     var username=localStorage.getItem('loggedInUser');if(!username){window.location.href='Index.html';return;}
     currentUser=username;
-    var accts=JSON.parse(localStorage.getItem('approvedAccounts'))||[];
-    var user=accts.find(function(a){return a.username&&a.username.toLowerCase()===username.toLowerCase();});
-    if(!user||!Array.isArray(user.access)||!user.access.includes('Console')){
+    var access=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+    if(!access.includes('Console')&&username.toLowerCase()!=='restricted'){
         document.getElementById('main').innerHTML='<div class="access-denied">// ACCESS DENIED //</div>';return;
     }
     buildWsSel();var fs=i522wjZRL9();if(fs.activeWs)selectWorkspace(fs.activeWs);

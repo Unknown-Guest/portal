@@ -351,64 +351,27 @@ window.addEventListener('unhandledrejection', function(e) {
 </script>
 
 
-<script>
-/* ── ADMIN ACCESS GUARD ────────────────────────────────────────────────────────── */
+<script>/* ── ADMIN ACCESS GUARD (Supabase) ─────────────────────────────────────────── */
 (function(){
-    function logSecurityViolation(user, page) {
-        try {
-            var violations = JSON.parse(localStorage.getItem('scpSecurityViolations') || '[]');
-            var vEntry = { username: user, page: page, time: new Date().toISOString(), ua: navigator.userAgent.slice(0, 80) };
-            violations.push(vEntry);
-            localStorage.setItem('scpSecurityViolations', JSON.stringify(violations));
-            // Also embed in the account object — survives clearing scpSecurityViolations
-            try {
-                var _va = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-                var _vm = _va.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
-                if (_vm) {
-                    if (!Array.isArray(_vm.violations)) _vm.violations = [];
-                    _vm.violations.push(vEntry);
-                    (window.DB ? DB.save("approvedAccounts", _va) : localStorage.setItem("approvedAccounts", JSON.stringify(_va)));
-                }
-            } catch(e) {}
-        } catch(e) {}
-    }
-    function suspendAccount(username) {
-        try {
-            var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-            var acc = accounts.find(function(a){ return a.username.toLowerCase() === username.toLowerCase(); });
-            if (acc && username.toLowerCase() !== 'restricted') {
-                acc.suspended = true;
-                acc.suspendedAt = new Date().toISOString();
-                acc.suspendReason = 'Attempted unauthorised access to Admin Panel';
-                (window.DB ? DB.save("approvedAccounts", accounts) : localStorage.setItem("approvedAccounts", JSON.stringify(accounts)));
-                try { var d=localStorage.getItem('approvedAccounts')||'[]',h=5381; for(var i=0;i<d.length;i++) h=((h<<5)+h)^d.charCodeAt(i); localStorage.setItem('_ic',(h>>>0).toString(36)); } catch(e) {}
+    async function checkAdminAccess(){
+        var u=localStorage.getItem('loggedInUser');
+        var t=sessionStorage.getItem('_scp_st');
+        if(!u||!t){window.location.href='Index.html';return;}
+        var access=JSON.parse(localStorage.getItem('_scp_access')||'[]');
+        if(!access.includes('Admin')&&u.toLowerCase()!=='restricted'){
+            // Double-check with DB
+            var r=await sbReq('GET','accounts',null,'username=ilike.'+encodeURIComponent(u)+'&deleted=eq.false');
+            var me=r&&r[0];
+            if(!me||(!(me.access&&me.access.includes('Admin'))&&me.username.toLowerCase()!=='restricted')){
+                await dbLogViolation(u,'UNAUTHORIZED_ACCESS','Attempted access to Admin Panel');
+                await dbUpdateAccount(u,{suspended:true,suspend_reason:'Attempted unauthorised access to Admin Panel'});
+                localStorage.removeItem('loggedInUser');sessionStorage.clear();
+                window.location.href='Index.html';return;
             }
-        } catch(e) {}
-    }
-    function checkAdminAccess() {
-        var user = localStorage.getItem('loggedInUser');
-        if (!user) { window.location.href = 'Index.html'; return; }
-        var accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-        var me = accounts.find(function(a){ return a.username.toLowerCase() === user.toLowerCase(); });
-        if (!me) { window.location.href = 'Index.html'; return; }
-        var isAdmin = (me.access && me.access.includes('Admin')) || me.username.toLowerCase() === 'restricted';
-        if (!isAdmin) {
-            // Log violation, suspend account, sign out
-            logSecurityViolation(user, 'Admin Panel');
-            suspendAccount(user);
-            localStorage.removeItem('loggedInUser');
-            sessionStorage.clear();
-            window.location.href = 'Index.html';
-            return;
         }
     }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkAdminAccess);
-    } else {
-        checkAdminAccess();
-    }
-})();
-</script>
+    document.readyState==='loading'?document.addEventListener('DOMContentLoaded',checkAdminAccess):checkAdminAccess();
+})();</script>
 
 
 <script>
@@ -574,7 +537,6 @@ window.addEventListener('unhandledrejection', function(e) {
 })();
 </script>
 
-<script src="db.js"></script>
 </head>
 <body>
 
@@ -755,6 +717,7 @@ if (document.readyState === 'loading') {
         <button class="refresh-btn" id="hide-students-btn" onclick="toggleSection('student-list','hide-students-btn')">▲ HIDE</button>
     </div>
 </div>
+<div id="restricted-account-row"></div>
 <div id="student-list"></div>
 
 <!-- TEACHERS -->
@@ -790,525 +753,395 @@ if (document.readyState === 'loading') {
 </div>
 <div id="deleted-list"></div>
 
-<script>
-function getComputedGrade(account) {
-    if (!account || account.role === 'teacher') return null;
-    if (!account.initialGrade || !account.gradeYear) return null;
-    const g = account.initialGrade + (new Date().getFullYear() - account.gradeYear);
-    if (g > 12) return 'graduated';
-    return Math.min(g, 12);
+<script src="scp_supabase.js"></script>
+<script>// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function escapeHtml(str){ if(!str)return''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;'); }
+function safeArray(v){ return Array.isArray(v)?v:[]; }
+function sanitizeSearch(s){ return String(s).replace(/[<>"'`\\]/g,'').toLowerCase().trim().slice(0,100); }
+
+function getComputedGrade(a){
+    if(!a||a.role==='teacher')return null;
+    if(!a.initial_grade||!a.grade_year)return null;
+    const g=a.initial_grade+(new Date().getFullYear()-a.grade_year);
+    if(g>12)return'graduated';
+    return Math.min(g,12);
+}
+function getRoleBadge(e){
+    const access=safeArray(e.access);
+    if(access.includes('Admin'))return'<span style="color:#ffcc00;font-size:10px;letter-spacing:1px;border:1px solid #ffcc00;padding:1px 6px;margin-left:8px;">ADMIN</span>';
+    if(e.role==='teacher')return'<span style="color:#3fbf3f;font-size:10px;letter-spacing:1px;border:1px solid #3fbf3f;padding:1px 6px;margin-left:8px;">TEACHER</span>';
+    const g=getComputedGrade(e);
+    if(g==='graduated')return'<span style="color:#6fdc6f;font-size:10px;letter-spacing:1px;border:1px solid #6fdc6f;padding:1px 6px;margin-left:8px;">GRADUATED</span>';
+    if(g)return`<span style="color:#6fdc6f;font-size:10px;letter-spacing:1px;border:1px solid #555;padding:1px 6px;margin-left:8px;">YEAR ${g}</span>`;
+    return'<span style="color:#888;font-size:10px;letter-spacing:1px;border:1px solid #555;padding:1px 6px;margin-left:8px;">STUDENT</span>';
+}
+async function wLYTH8xIZM(pw){
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw+'scp_pw_2026'));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+var _currentUserIsRestricted=(localStorage.getItem('loggedInUser')||'').toLowerCase()==='restricted';
+
+// ── TEACHER CODE ──────────────────────────────────────────────────────────────
+function toggleCodeVisibility(){
+    const inp=document.getElementById('teacher-code-input'),btn=document.getElementById('code-eye-btn');
+    if(inp.type==='password'){inp.type='text';btn.style.opacity='1';}
+    else{inp.type='password';btn.style.opacity='0.7';}
+}
+async function f0ee1z6JJc(){
+    const val=document.getElementById('teacher-code-input').value.trim();
+    if(!val)return;
+    await dbSetSetting('teacher_code',val);
+    const s=document.getElementById('code-save-status');
+    s.innerText='✓ Saved'; setTimeout(()=>s.innerText='',2000);
 }
 
-function getTeacherCode() { return localStorage.getItem('scpTeacherCode') || ''; }
-
-function toggleCodeVisibility() {
-    const inp = document.getElementById('teacher-code-input');
-    const btn = document.getElementById('code-eye-btn');
-    if (inp.type === 'password') { inp.type = 'text'; btn.style.opacity = '1'; }
-    else { inp.type = 'password'; btn.style.opacity = '0.7'; }
+// ── LOOKUP ────────────────────────────────────────────────────────────────────
+async function Jae24HZKjh(){
+    const q=document.getElementById('lookup-input').value.trim();
+    const res=document.getElementById('lookup-result');
+    if(!q){res.innerHTML='';return;}
+    const u=await dbGetAccount(q);
+    if(!u){res.innerHTML='<span style="color:#888;">// No account found //</span>';return;}
+    const g=getComputedGrade(u);
+    const gs=u.role==='teacher'?'🏫 Teacher':g==='graduated'?'🎓 Graduated':`Year ${g||u.initial_grade||'?'}`;
+    res.innerHTML=`<b style="color:var(--scp-green-soft)">${escapeHtml(u.name)}</b> &nbsp;|&nbsp; <span style="color:#aaa">${escapeHtml(u.email||'—')}</span> &nbsp;|&nbsp; <span style="color:#888;font-size:11px;">${gs}</span>`;
 }
 
-function f0ee1z6JJc() {
-    const val = document.getElementById('teacher-code-input').value.trim();
-    if (!val) return;
-    if(window.DB) DB.save('scpTeacherCode', val); else localStorage.setItem('scpTeacherCode', val);;
-    const s = document.getElementById('code-save-status');
-    s.innerText = '✓ Saved'; setTimeout(() => s.innerText = '', 2000);
-}
-
-function Jae24HZKjh() {
-    const q = document.getElementById('lookup-input').value.trim().toLowerCase();
-    const res = document.getElementById('lookup-result');
-    if (!q) { res.innerHTML = ''; return; }
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts')) || [];
-    const u = accounts.find(a => a.username.toLowerCase() === q);
-    if (!u) { res.innerHTML = '<span style="color:#888;">// No account found with that username //</span>'; return; }
-    const g = getComputedGrade(u);
-    const gradeStr = u.role === 'teacher' ? '🏫 Teacher' : g === 'graduated' ? '🎓 Graduated' : `Year ${g || u.initialGrade || '?'}`;
-    res.innerHTML = `<b style="color:var(--scp-green-soft)">${escapeHtml(u.name)}</b>
-        &nbsp;|&nbsp; <span style="color:#aaa">${escapeHtml(u.email || '—')}</span>
-        &nbsp;|&nbsp; <span style="color:#888;font-size:11px;">${gradeStr}</span>`;
-}
-
-function getEffectiveGrade(account) {
-    if (account.role === 'teacher') return null;
-    if (!account.initialGrade) return null;
-    const grade = account.initialGrade + (new Date().getFullYear() - account.gradeYear);
-    if (grade > 12) return 'graduated';
-    return Math.min(grade, 12);
-}
-
-function getRoleBadge(entry) {
-    if (entry.access && entry.access.includes('Admin')) return '<span style="color:#ffcc00;font-size:10px;letter-spacing:1px;border:1px solid #ffcc00;padding:1px 6px;margin-left:8px;">ADMIN</span>';
-    if (entry.role === 'teacher') return '<span style="color:#3fbf3f;font-size:10px;letter-spacing:1px;border:1px solid #3fbf3f;padding:1px 6px;margin-left:8px;">TEACHER</span>';
-    const g = getEffectiveGrade(entry);
-    if (g === 'graduated') return '<span style="color:#6fdc6f;font-size:10px;letter-spacing:1px;border:1px solid #6fdc6f;padding:1px 6px;margin-left:8px;">GRADUATED</span>';
-    if (g) return `<span style="color:#6fdc6f;font-size:10px;letter-spacing:1px;border:1px solid #555;padding:1px 6px;margin-left:8px;">YEAR ${g}</span>`;
-    return '<span style="color:#888;font-size:10px;letter-spacing:1px;border:1px solid #555;padding:1px 6px;margin-left:8px;">STUDENT</span>';
-}
-
-function safeArray(v) { return Array.isArray(v) ? v : []; }
-function getGroups() { return JSON.parse(localStorage.getItem("scpGroups")) || []; }
-function saveGroups(g) { (window.DB ? DB.save("scpGroups", g) : localStorage.setItem("scpGroups", JSON.stringify(g))); }
-
-function ensureSystemGroups(username) {
-    const accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const user = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
-    const role = user ? user.role : 'student';
-    const isTeacher = role === 'teacher';
-    const isStudent = !isTeacher;
-    let groups = getGroups();
-    let welcome = groups.find(g => g.id === 'permanent_welcome');
-    if (!welcome) { welcome = { id: 'permanent_welcome', name: 'Welcome', members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType: 'all' }; groups.push(welcome); }
-    if (!welcome.members.map(x => x.toLowerCase()).includes(username.toLowerCase())) welcome.members.push(username);
-    let studentsGroup = groups.find(g => g.id === 'permanent_students');
-    if (!studentsGroup) { studentsGroup = { id: 'permanent_students', name: 'Students', members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType: 'students' }; groups.push(studentsGroup); }
-    if (isStudent && !studentsGroup.members.map(x => x.toLowerCase()).includes(username.toLowerCase())) studentsGroup.members.push(username);
-    let teachersGroup = groups.find(g => g.id === 'permanent_teachers');
-    if (!teachersGroup) { teachersGroup = { id: 'permanent_teachers', name: 'Teachers', members: [], createdBy: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, groupType: 'teachers' }; groups.push(teachersGroup); }
-    if (isTeacher && !teachersGroup.members.map(x => x.toLowerCase()).includes(username.toLowerCase())) teachersGroup.members.push(username);
-    saveGroups(groups);
-}
-
-function YDzfOvz1dO() {
-    let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
-    const list = document.getElementById("request-list");
-    list.innerHTML = "";
-    if (pending.length === 0) { list.innerHTML = '<div class="empty-msg">// NO PENDING REQUESTS //</div>'; return; }
-    pending.forEach((entry, index) => {
-        const div = document.createElement("div");
-        div.className = "request-item";
-        div.innerHTML = `
+// ── PENDING REQUESTS (auto-refresh every 5s) ──────────────────────────────────
+var _pendingPollTimer=null;
+async function YDzfOvz1dO(){
+    const list=document.getElementById('request-list');
+    if(!list)return;
+    const pending=await dbGetPending();
+    list.innerHTML='';
+    if(pending.length===0){list.innerHTML='<div class="empty-msg">// NO PENDING REQUESTS //</div>';return;}
+    pending.forEach(entry=>{
+        const div=document.createElement('div');
+        div.className='request-item';
+        div.innerHTML=`
             <div>
                 <div><b>Name:</b> ${escapeHtml(entry.name)}</div>
                 <div><b>Username:</b> ${escapeHtml(entry.username)}</div>
-                <div><b>Email:</b> ${escapeHtml(entry.email || "—")}</div>
-                ${_currentUserIsRestricted ? `<div><b>Password:</b> <span style="color:#888;font-family:monospace;font-size:11px;">${escapeHtml(entry.password || '—')}</span></div>` : ''}
-                <div><b>Role:</b> ${entry.role === 'teacher' ? '🏫 TEACHER' : `📚 STUDENT – Year ${entry.initialGrade || '?'}`}</div>
+                <div><b>Email:</b> ${escapeHtml(entry.email||'—')}</div>
+                <div><b>Role:</b> ${entry.role==='teacher'?'🏫 TEACHER':`📚 STUDENT – Year ${entry.initial_grade||'?'}`}</div>
             </div>
             <div>
-                <button class="admin-btn allow" onclick="PCqpIqK3yn(${index})">▶ ALLOW</button>
-                <button class="admin-btn iFfcgMXAdx-btn" onclick="iFfcgMXAdx(${index})">✕ DENY</button>
+                <button class="admin-btn allow" onclick="PCqpIqK3yn('${entry.id}')">▶ ALLOW</button>
+                <button class="admin-btn iFfcgMXAdx-btn" onclick="iFfcgMXAdx('${entry.id}')">✕ DENY</button>
             </div>`;
         list.appendChild(div);
     });
 }
-
-
-// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
-
-// ── XSS PROTECTION ───────────────────────────────────────────────────────────
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+function startPendingPoll(){
+    _pendingPollTimer=setInterval(YDzfOvz1dO,5000);
 }
 
-// ── PASSWORD HASH HELPER ──────────────────────────────────────────────────────
-async function wLYTH8xIZM(pw) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'scp_pw_2026'));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-// Track whether the current viewer is the Restricted superadmin
-var _currentUserIsRestricted = (localStorage.getItem('loggedInUser') || '').toLowerCase() === 'restricted';
+// ── ACCOUNTS ──────────────────────────────────────────────────────────────────
+async function Pgyv1plBAr(force=false){
+    const studentEl=document.getElementById('student-list');
+    const teacherEl=document.getElementById('teacher-list');
+    if(!studentEl||!teacherEl)return;
+    studentEl.innerHTML='<div class="empty-msg">// LOADING... //</div>';
+    teacherEl.innerHTML='<div class="empty-msg">// LOADING... //</div>';
 
-function auditLog(action, target) {
-    try {
-        var logs = JSON.parse(localStorage.getItem('scpAuditLog') || '[]');
-        var adminUser = localStorage.getItem('loggedInUser') || 'unknown';
-        logs.push({ time: new Date().toISOString(), admin: adminUser, action: action, target: target });
-        if (logs.length > 500) logs = logs.slice(logs.length - 500); // keep last 500
-        (window.DB ? DB.save("scpAuditLog", logs) : localStorage.setItem("scpAuditLog", JSON.stringify(logs)));
-    } catch(e) {}
-}
+    let accounts=await dbGetAccounts();
+    const studentQ=sanitizeSearch(document.getElementById('student-search').value||'');
+    const teacherQ=sanitizeSearch(document.getElementById('teacher-search').value||'');
 
-// Sanitize search inputs against injection
-function sanitizeSearch(str) {
-    return String(str).replace(/[<>"'`\\]/g, '').toLowerCase().trim().slice(0, 100);
-}
+    // FIX: Restricted account always gets Admin in its access array
+    accounts=accounts.map(a=>{
+        if(a.username.toLowerCase()==='restricted'){
+            const acc=safeArray(a.access);
+            if(!acc.includes('Admin'))a.access=[...acc,'Admin'];
+        }
+        return a;
+    });
 
-function Pgyv1plBAr() {
-    let accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const studentQ = sanitizeSearch(document.getElementById('student-search').value || '');
-    const teacherQ = sanitizeSearch(document.getElementById('teacher-search').value || '');
+    let students=accounts.filter(a=>a.role!=='teacher'&&a.username.toLowerCase()!=='restricted');
+    let teachers=accounts.filter(a=>a.role==='teacher');
 
-    let students = accounts.filter(a => a.role !== 'teacher' && a.username.toLowerCase() !== 'restricted');
-    let teachers = accounts.filter(a => a.role === 'teacher');
+    if(studentQ)students=students.filter(a=>(a.username||'').toLowerCase().includes(studentQ)||(a.name||'').toLowerCase().includes(studentQ)||(a.email||'').toLowerCase().includes(studentQ));
+    if(teacherQ)teachers=teachers.filter(a=>(a.username||'').toLowerCase().includes(teacherQ)||(a.name||'').toLowerCase().includes(teacherQ)||(a.email||'').toLowerCase().includes(teacherQ));
 
-    if (studentQ) students = students.filter(a =>
-        (a.username||'').toLowerCase().includes(studentQ) ||
-        (a.name||'').toLowerCase().includes(studentQ) ||
-        (a.email||'').toLowerCase().includes(studentQ)
-    );
-    if (teacherQ) teachers = teachers.filter(a =>
-        (a.username||'').toLowerCase().includes(teacherQ) ||
-        (a.name||'').toLowerCase().includes(teacherQ) ||
-        (a.email||'').toLowerCase().includes(teacherQ)
-    );
+    if(students.length===0)studentEl.innerHTML='<div class="empty-msg">// NO STUDENT ACCOUNTS'+(studentQ?' MATCHING SEARCH':'')+' //</div>';
+    else renderAccountList(students,studentEl,false);
+    if(teachers.length===0)teacherEl.innerHTML='<div class="empty-msg">// NO TEACHER ACCOUNTS'+(teacherQ?' MATCHING SEARCH':'')+' //</div>';
+    else renderAccountList(teachers,teacherEl,true);
 
-    const studentEl = document.getElementById("student-list");
-    const teacherEl = document.getElementById("teacher-list");
-
-    if (students.length === 0) studentEl.innerHTML = '<div class="empty-msg">// NO STUDENT ACCOUNTS' + (studentQ ? ' MATCHING SEARCH' : '') + ' //</div>';
-    else renderAccountList(students, studentEl, accounts, false);
-
-    if (teachers.length === 0) teacherEl.innerHTML = '<div class="empty-msg">// NO TEACHER ACCOUNTS' + (teacherQ ? ' MATCHING SEARCH' : '') + ' //</div>';
-    else renderAccountList(teachers, teacherEl, accounts, true);
+    // Render Restricted (superadmin) account at the top of the accounts section
+    const restrictedRow=document.getElementById('restricted-account-row');
+    const restricted=accounts.find(a=>a.username.toLowerCase()==='restricted');
+    if(restrictedRow&&restricted){
+        restrictedRow.innerHTML=`
+            <div class="account-item" style="border-color:#ffcc00;box-shadow:0 0 8px rgba(255,204,0,0.15);margin-bottom:10px;">
+                <div class="account-info-top">
+                    <div><b>Name:</b> ${escapeHtml(restricted.name)} <span style="color:#ffcc00;font-size:10px;letter-spacing:1px;border:1px solid #ffcc00;padding:1px 6px;margin-left:8px;">ADMIN</span></div>
+                    <div><b>Username:</b> ${escapeHtml(restricted.username)}</div>
+                    <div><b>Access:</b> All permissions (Superadmin)</div>
+                </div>
+                <div class="account-controls-row"><span style="color:#555;font-size:10px;letter-spacing:1px;">🔒 SUPERADMIN — PROTECTED ACCOUNT</span></div>
+            </div>`;
+    }
 }
 
-function c1eoPni6JD(index) {
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-    if (!accounts[index]) return;
-    accounts[index].hidden = !accounts[index].hidden;
-    (window.DB ? DB.save("approvedAccounts", accounts) : localStorage.setItem("approvedAccounts", JSON.stringify(accounts)));
-    Pgyv1plBAr();
-}
+function isSpecialAccount(e){ return e.name&&e.name.toLowerCase()==='test'||e.username&&e.username.toLowerCase()==='test'; }
 
-function isSpecialAccount(entry) {
-    return entry.name.toLowerCase() === 'test' ||
-           entry.username.toLowerCase() === 'test' ||
-           false /* personal email removed */;
-}
-
-function renderAccountList(subset, listEl, allAccounts, isTeacherList = false) {
-    listEl.innerHTML = "";
-    subset.forEach(entry => {
-        const index = allAccounts.indexOf(entry);
-        entry.access = safeArray(entry.access);
-        entry.favorite = entry.favorite === true;
-        entry.redacted = entry.redacted === true;
-        entry.hidden = entry.hidden !== false; // default to true (hidden)
-        const special = isSpecialAccount(entry);
-        const canDelete = !entry.favorite || special;
-        const computedGrade = getComputedGrade(entry);
-        const gradeDisplay = entry.role === 'teacher' ? '🏫 Teacher'
-            : computedGrade === 'graduated' ? '🎓 Graduated'
-            : `📚 Year ${computedGrade || entry.initialGrade || '?'}`;
-
-        const div = document.createElement("div");
-        div.className = "account-item" + (special ? " special-account" : "");
-        div.innerHTML = `
+function renderAccountList(subset,listEl,isTeacherList=false){
+    listEl.innerHTML='';
+    subset.forEach(entry=>{
+        entry.access=safeArray(entry.access);
+        entry.favorite=entry.favorite===true;
+        entry.redacted=entry.redacted===true;
+        entry.hidden=entry.hidden!==false;
+        const special=isSpecialAccount(entry);
+        const canDelete=!entry.favorite||special;
+        const g=getComputedGrade(entry);
+        const gd=entry.role==='teacher'?'🏫 Teacher':g==='graduated'?'🎓 Graduated':`📚 Year ${g||entry.initial_grade||'?'}`;
+        const div=document.createElement('div');
+        div.className='account-item'+(special?' special-account':'');
+        div.innerHTML=`
             <div class="account-info-top">
                 <div><b>Name:</b> ${escapeHtml(entry.name)} ${getRoleBadge(entry)}</div>
-                <div><b>Username:</b> ${entry.redacted ? '<span style="color:var(--scp-orange)">Redacted</span>' : escapeHtml(entry.username)}</div>
-                <div><b>Email:</b> ${escapeHtml(entry.email || "—")}</div>
-                ${_currentUserIsRestricted ? `<div><b>Password:</b> <span style="color:#888;font-family:monospace;font-size:11px;">${entry.hidden ? '****' : escapeHtml(entry.password || '—')}</span> <button onclick="c1eoPni6JD(${index})" style="background:transparent;border:1px solid #333;color:#555;font-size:9px;padding:1px 5px;cursor:pointer;letter-spacing:1px;">👁</button></div>` : ''}
-                <div><b>Role:</b> ${gradeDisplay}</div>
-                <div><b>Access:</b> ${escapeHtml(entry.access.join(", ") || "None")}</div>
+                <div><b>Username:</b> ${entry.redacted?'<span style="color:var(--scp-orange)">Redacted</span>':escapeHtml(entry.username)}</div>
+                <div><b>Email:</b> ${escapeHtml(entry.email||'—')}</div>
+                ${_currentUserIsRestricted?`<div><b>Password:</b> <span style="color:#888;font-family:monospace;font-size:11px;">${entry.hidden?'****':escapeHtml(entry.password||'—')}</span> <button onclick="togglePassVis('${entry.username}')" style="background:transparent;border:1px solid #333;color:#555;font-size:9px;padding:1px 5px;cursor:pointer;">👁</button></div>`:''}
+                <div><b>Role:</b> ${gd}</div>
+                <div><b>Access:</b> ${escapeHtml(entry.access.join(', ')||'None')}</div>
             </div>
             <div class="account-controls-row">
-                <span class="star-btn ${entry.favorite ? "star-on" : "star-off"}" onclick="UEeVVhDIq2(${index})">★</span>
-                ${makeAccessBtn(entry, index, "Files")}
-                ${isTeacherList ? "" : makeAccessBtn(entry, index, "Hacks")}
-                ${makeAccessBtn(entry, index, "Console")}
-                ${makeAccessBtn(entry, index, "Websites")}
-                ${makeAccessBtn(entry, index, "Tutors")}
-                ${makeAccessBtn(entry, index, "Messages")}
-                ${makeAccessBtn(entry, index, "Admin", "📢")}
-                ${!isTeacherList ? `
-                    <button class="admin-btn ${entry.redacted ? 'orange-on' : 'orange-off'}" onclick="B75UQSyPx3(${index})">
-                        📛 ${entry.redacted ? "UNREDACT" : "REDACT"}
-                    </button>
-                    <button class="admin-btn ${entry.hidden ? 'orange-on' : 'orange-off'}" onclick="ChnuKoneNo(${index})">
-                        🔑 ${entry.hidden ? "SHOW PASS" : "HIDE PASS"}
-                    </button>` : ''}
-                <button class="admin-btn delete ${canDelete ? "" : "disabled"}"
-                        onclick="${canDelete ? `DG81aSQHqN(${index})` : ""}">DELETE</button>
+                <span class="star-btn ${entry.favorite?'star-on':'star-off'}" onclick="UEeVVhDIq2('${entry.username}')">★</span>
+                ${makeAccessBtn(entry,'Files')}
+                ${isTeacherList?'':makeAccessBtn(entry,'Hacks')}
+                ${makeAccessBtn(entry,'Console')}
+                ${makeAccessBtn(entry,'Websites')}
+                ${makeAccessBtn(entry,'Tutors')}
+                ${makeAccessBtn(entry,'Messages')}
+                ${makeAccessBtn(entry,'Admin','📢')}
+                ${!isTeacherList?`
+                    <button class="admin-btn ${entry.redacted?'orange-on':'orange-off'}" onclick="B75UQSyPx3('${entry.username}')">📛 ${entry.redacted?'UNREDACT':'REDACT'}</button>
+                    <button class="admin-btn ${entry.hidden?'orange-on':'orange-off'}" onclick="ChnuKoneNo('${entry.username}')">🔑 ${entry.hidden?'SHOW PASS':'HIDE PASS'}</button>`:''}
+                <button class="admin-btn delete ${canDelete?'':'disabled'}" onclick="${canDelete?`DG81aSQHqN('${entry.username}')`:''}">DELETE</button>
             </div>`;
         listEl.appendChild(div);
     });
 }
 
-function makeAccessBtn(entry, index, role, prefix = "") {
-    const active = entry.access.includes(role);
-    // Restricted account's Admin button is permanently locked
-    if (entry.username.toLowerCase() === 'restricted' && role === 'Admin') {
-        return `<button class="access-btn access-on" style="opacity:0.5;cursor:not-allowed;" title="Restricted account always has Admin access">🔒 Admin</button>`;
-    }
-    return `<button class="access-btn ${active ? "access-on" : "access-off"}" onclick="cXye4JSnE2(${index}, '${role}')">${prefix ? prefix + " " : ""}${role}</button>`;
+function makeAccessBtn(entry,role,prefix=''){
+    const active=entry.access.includes(role);
+    if(entry.username.toLowerCase()==='restricted'&&role==='Admin')
+        return`<button class="access-btn access-on" style="opacity:0.5;cursor:not-allowed;" title="Always Admin">🔒 Admin</button>`;
+    return`<button class="access-btn ${active?'access-on':'access-off'}" onclick="cXye4JSnE2('${entry.username}','${role}')">${prefix?prefix+' ':''}${role}</button>`;
 }
 
-function UEeVVhDIq2(index) {
-    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    a[index].favorite = !a[index].favorite;
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
+async function togglePassVis(username){
+    const acc=await dbGetAccount(username);
+    if(!acc)return;
+    await dbUpdateAccount(username,{hidden:!acc.hidden});
+    Pgyv1plBAr(true);
+}
+async function UEeVVhDIq2(username){
+    const acc=await dbGetAccount(username);
+    if(!acc)return;
+    await dbUpdateAccount(username,{favorite:!acc.favorite});
+    Pgyv1plBAr();
+}
+async function B75UQSyPx3(username){
+    const acc=await dbGetAccount(username);
+    if(!acc)return;
+    await dbUpdateAccount(username,{redacted:!acc.redacted});
+    Pgyv1plBAr();
+}
+async function ChnuKoneNo(username){
+    const acc=await dbGetAccount(username);
+    if(!acc)return;
+    await dbUpdateAccount(username,{hidden:!acc.hidden});
+    Pgyv1plBAr();
+}
+async function cXye4JSnE2(username,role){
+    if(username.toLowerCase()==='restricted'&&role==='Admin')return;
+    const acc=await dbGetAccount(username);
+    if(!acc)return;
+    let access=safeArray(acc.access);
+    if(access.includes(role))access=access.filter(r=>r!==role);
+    else access.push(role);
+    await dbUpdateAccount(username,{access});
     Pgyv1plBAr();
 }
 
-function B75UQSyPx3(index) {
-    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    a[index].redacted = !a[index].redacted;
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
-    location.reload();
-}
-
-function ChnuKoneNo(index) {
-    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    a[index].hidden = !a[index].hidden;
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
-    location.reload();
-}
-
-function cXye4JSnE2(index, role) {
-    let a = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    // Restricted account can never lose Admin access
-    if (a[index].username.toLowerCase() === 'restricted' && role === 'Admin') return;
-    a[index].access = safeArray(a[index].access);
-    if (a[index].access.includes(role)) {
-        a[index].access = a[index].access.filter(r => r !== role);
-    } else {
-        a[index].access.push(role);
-    }
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', a);
-    Pgyv1plBAr();
-}
-
-function PCqpIqK3yn(index) {
-    let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
-    let accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    const u = pending[index];
-    accounts.push({
-        name: u.name, username: u.username, email: u.email || "",
-        password: u.password, role: u.role || 'student',
-        initialGrade: u.initialGrade || null, gradeYear: u.gradeYear || null,
-        access: ["Files", "Hacks", "Console", "Websites", "Tutors", "Messages"],
-        favorite: false, redacted: false, hidden: true
+// ── APPROVE / DENY ────────────────────────────────────────────────────────────
+async function PCqpIqK3yn(pendingId){
+    const pending=await dbGetPending();
+    const u=pending.find(p=>String(p.id)===String(pendingId));
+    if(!u)return;
+    await dbUpsertAccount({
+        username:u.username, name:u.name, email:u.email||'',
+        password:u.password, role:u.role||'student',
+        initial_grade:u.initial_grade||null, grade_year:u.grade_year||null,
+        access:['Files','Hacks','Console','Websites','Tutors','Messages'],
+        favorite:false, redacted:false, hidden:true, suspended:false, deleted:false
     });
-    pending.splice(index, 1);
-    (window.DB ? DB.save("pendingAccounts", pending) : localStorage.setItem("pendingAccounts", JSON.stringify(pending)));
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
-    ensureSystemGroups(u.username);
-    let delList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
-    delList = delList.filter(d => d.username.toLowerCase() !== u.username.toLowerCase());
-    (window.DB ? DB.save("deletedAccounts", delList) : localStorage.setItem("deletedAccounts", JSON.stringify(delList)));
-    YDzfOvz1dO(); Pgyv1plBAr(); p2eY1gOHaf();
+    await dbRemovePending(pendingId);
+    await ensureSystemGroups(u.username);
+    await dbAudit(localStorage.getItem('loggedInUser')||'admin','APPROVE_ACCOUNT',u.username,'');
+    YDzfOvz1dO(); Pgyv1plBAr(true); p2eY1gOHaf();
 }
 
-function iFfcgMXAdx(index) {
-    let pending = JSON.parse(localStorage.getItem("pendingAccounts")) || [];
-    pending.splice(index, 1);
-    (window.DB ? DB.save("pendingAccounts", pending) : localStorage.setItem("pendingAccounts", JSON.stringify(pending)));
+async function iFfcgMXAdx(pendingId){
+    await dbRemovePending(pendingId);
     YDzfOvz1dO();
 }
 
-function DG81aSQHqN(index) {
-    let accounts = JSON.parse(localStorage.getItem("approvedAccounts")) || [];
-    if (accounts[index]) auditLog('DELETE_ACCOUNT', accounts[index].username);
-    const deleted = accounts[index];
-    const deletedUsername = deleted.username.toLowerCase();
+async function ensureSystemGroups(username){
+    const user=await dbGetAccount(username);
+    const isTeacher=user&&user.role==='teacher';
+    const allGroups=await dbGetAllGroups();
 
-    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
-    // Store full info for pending deleted accounts
-    deletedList.push({
-        username: deleted.username,
-        name: deleted.name || '',
-        email: deleted.email || '',
-        role: deleted.role || 'student',
-        deletedAt: Date.now(),
-        deletedBy: 'admin'
-    });
-    (window.DB ? DB.save("deletedAccounts", deletedList) : localStorage.setItem("deletedAccounts", JSON.stringify(deletedList)));
-
-    let groups = getGroups();
-    groups.forEach(g => { g.members = g.members.filter(m => m.toLowerCase() !== deletedUsername); });
-    saveGroups(groups);
-
-    let msgs = JSON.parse(localStorage.getItem("scpMessages")) || [];
-    msgs = msgs.filter(m => {
-        if (m.groupId) return true;
-        return !(m.from && m.from.toLowerCase() === deletedUsername) && !(m.to && m.to.toLowerCase() === deletedUsername);
-    });
-    (window.DB ? DB.save("scpMessages", msgs) : localStorage.setItem("scpMessages", JSON.stringify(msgs)));
-
-    const convs = (JSON.parse(localStorage.getItem("scpDMConvs")) || []).filter(c => !c.includes(deletedUsername));
-    localStorage.setItem("scpDMConvs", JSON.stringify(convs));
-
-    accounts.splice(index, 1);
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
-    Pgyv1plBAr(); p2eY1gOHaf();
+    async function ensure(id,name,gtype){
+        let g=allGroups.find(x=>x.id===id);
+        if(!g){
+            g={id,name,members:[],created_by:'SYSTEM',created:Date.now(),deleted:false,permanent:true,group_type:gtype};
+            await dbCreateGroup(g);
+        }
+        return g;
+    }
+    const welcome=await ensure('permanent_welcome','Welcome','all');
+    if(!(welcome.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())){
+        welcome.members=[...(welcome.members||[]),username];
+        await dbUpdateGroup('permanent_welcome',{members:welcome.members});
+    }
+    const studGrp=await ensure('permanent_students','Students','students');
+    if(!isTeacher&&!(studGrp.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())){
+        studGrp.members=[...(studGrp.members||[]),username];
+        await dbUpdateGroup('permanent_students',{members:studGrp.members});
+    }
+    const teachGrp=await ensure('permanent_teachers','Teachers','teachers');
+    if(isTeacher&&!(teachGrp.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())){
+        teachGrp.members=[...(teachGrp.members||[]),username];
+        await dbUpdateGroup('permanent_teachers',{members:teachGrp.members});
+    }
 }
 
-function p2eY1gOHaf() {
-    const q = (document.getElementById('deleted-search').value || '').toLowerCase();
-    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
-    if (q) deletedList = deletedList.filter(e =>
-        (e.username||'').toLowerCase().includes(q) ||
-        (e.name||'').toLowerCase().includes(q) ||
-        (e.email||'').toLowerCase().includes(q)
-    );
-    const listEl = document.getElementById("deleted-list");
-    if (!listEl) return;
-    if (deletedList.length === 0) {
-        listEl.innerHTML = '<div class="empty-msg">// NO PENDING DELETED ACCOUNTS' + (q ? ' MATCHING SEARCH' : '') + ' //</div>';
-        return;
+// ── DELETE ACCOUNT ────────────────────────────────────────────────────────────
+async function DG81aSQHqN(username){
+    if(!confirm(`Delete account "${username}"?`))return;
+    await dbAudit(localStorage.getItem('loggedInUser')||'admin','DELETE_ACCOUNT',username,'');
+    await dbDeleteAccount(username);
+    // Remove from groups
+    const groups=await dbGetAllGroups();
+    for(const g of groups){
+        const nm=(g.members||[]).filter(m=>m.toLowerCase()!==username.toLowerCase());
+        if(nm.length!==(g.members||[]).length)await dbUpdateGroup(g.id,{members:nm});
     }
-    listEl.innerHTML = "";
-    deletedList.forEach((entry, i) => {
-        const div = document.createElement("div");
-        div.className = "deleted-item";
-        const when = entry.deletedAt ? new Date(entry.deletedAt).toLocaleDateString() : '—';
-        const by = entry.deletedBy === 'self' ? 'Self-deleted' : entry.deletedBy === 'admin' ? 'Admin deleted' : '—';
-        div.innerHTML = `
+    Pgyv1plBAr(true); p2eY1gOHaf();
+}
+
+// ── DELETED ACCOUNTS (RECOVER WORKS) ─────────────────────────────────────────
+async function p2eY1gOHaf(){
+    const q=(document.getElementById('deleted-search').value||'').toLowerCase();
+    const listEl=document.getElementById('deleted-list');
+    if(!listEl)return;
+    listEl.innerHTML='<div class="empty-msg">// LOADING... //</div>';
+    let deletedList=await dbGetDeletedAccounts();
+    if(q)deletedList=deletedList.filter(e=>(e.username||'').toLowerCase().includes(q)||(e.name||'').toLowerCase().includes(q));
+    if(deletedList.length===0){
+        listEl.innerHTML='<div class="empty-msg">// NO DELETED ACCOUNTS'+(q?' MATCHING SEARCH':'')+' //</div>';return;
+    }
+    listEl.innerHTML='';
+    deletedList.forEach(entry=>{
+        const div=document.createElement('div');
+        div.className='deleted-item';
+        const when=entry.deleted_at?new Date(entry.deleted_at).toLocaleDateString():'—';
+        div.innerHTML=`
             <div>
-                <div><b>Username:</b> ${entry.username}</div>
-                ${entry.name ? `<div><b>Name:</b> ${entry.name}</div>` : ''}
-                ${entry.email ? `<div><b>Email:</b> ${entry.email}</div>` : ''}
-                <div style="font-size:10px;color:#888;margin-top:4px;">${by} · ${when} · Login attempts: ${entry.attempts || 0}/3</div>
+                <div><b>Username:</b> ${escapeHtml(entry.username)}</div>
+                ${entry.name?`<div><b>Name:</b> ${escapeHtml(entry.name)}</div>`:''}
+                ${entry.email?`<div><b>Email:</b> ${escapeHtml(entry.email)}</div>`:''}
+                <div style="font-size:10px;color:#888;margin-top:4px;">Deleted · ${when}</div>
             </div>
             <div class="account-controls">
-                <button class="admin-btn allow" onclick="OsNLjVHWGa(${i})">↩ RECOVER</button>
-                <button class="admin-btn iFfcgMXAdx-btn" onclick="uEgw9YooJe(${i})">✕ PURGE</button>
+                <button class="admin-btn allow" onclick="OsNLjVHWGa('${entry.username}')">↩ RECOVER</button>
+                <button class="admin-btn iFfcgMXAdx-btn" onclick="uEgw9YooJe('${entry.username}')">✕ PURGE</button>
             </div>`;
         listEl.appendChild(div);
     });
 }
 
-function OsNLjVHWGa(index) {
-    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
-    deletedList.splice(index, 1);
-    (window.DB ? DB.save("deletedAccounts", deletedList) : localStorage.setItem("deletedAccounts", JSON.stringify(deletedList)));
-    p2eY1gOHaf();
+// RECOVER: un-delete the account so it can log in again
+async function OsNLjVHWGa(username){
+    await dbUpdateAccount(username,{deleted:false,deleted_at:null,suspended:false});
+    await ensureSystemGroups(username);
+    await dbAudit(localStorage.getItem('loggedInUser')||'admin','RECOVER_ACCOUNT',username,'');
+    _accountsCache=null;
+    p2eY1gOHaf(); Pgyv1plBAr(true);
 }
 
-function uEgw9YooJe(index) {
-    if (!confirm("Permanently remove this deleted account record?")) return;
-    let deletedList = JSON.parse(localStorage.getItem("deletedAccounts")) || [];
-    deletedList.splice(index, 1);
-    (window.DB ? DB.save("deletedAccounts", deletedList) : localStorage.setItem("deletedAccounts", JSON.stringify(deletedList)));
+// PURGE: permanently remove account record
+async function uEgw9YooJe(username){
+    if(!confirm('Permanently remove this deleted account record?'))return;
+    await dbPurgeAccount(username);
     p2eY1gOHaf();
 }
-
 
 // ── SECURITY VIOLATIONS ───────────────────────────────────────────────────────
-function W0kEnydx9q() {
-    const q = (document.getElementById('violation-search').value || '').toLowerCase();
-    const violations = JSON.parse(localStorage.getItem('scpSecurityViolations') || '[]');
-    const accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-    const listEl = document.getElementById('violation-list');
-    if (!listEl) return;
-
-    // Collect suspended accounts
-    const suspended = accounts.filter(a => a.suspended && a.username.toLowerCase() !== 'restricted');
-
-    // Merge: show each suspended account with their violation entries
-    let entries = suspended.map(acc => {
-        const accViolations = violations.filter(v => v.username.toLowerCase() === acc.username.toLowerCase());
-        return { acc, accViolations };
-    });
-
-    // Also show violations for non-suspended accounts (already reactivated but still have a record)
-    const suspendedNames = suspended.map(a => a.username.toLowerCase());
-    const otherViolations = violations.filter(v => !suspendedNames.includes(v.username.toLowerCase()));
-    // Group by username
-    const otherMap = {};
-    otherViolations.forEach(v => {
-        const k = v.username.toLowerCase();
-        if (!otherMap[k]) otherMap[k] = [];
-        otherMap[k].push(v);
-    });
-
-    if (q) {
-        entries = entries.filter(e =>
-            e.acc.username.toLowerCase().includes(q) ||
-            e.acc.name.toLowerCase().includes(q) ||
-            e.accViolations.some(v => (v.page||'').toLowerCase().includes(q))
-        );
-    }
-
-    if (entries.length === 0 && Object.keys(otherMap).length === 0) {
-        listEl.innerHTML = '<div class="empty-msg">// NO SECURITY VIOLATIONS //</div>';
-        return;
-    }
-
-    listEl.innerHTML = '';
-
-    // Render suspended accounts
-    entries.forEach(({ acc, accViolations }) => {
-        const index = accounts.indexOf(acc);
-        const div = document.createElement('div');
-        div.className = 'account-item';
-        div.style.borderColor = '#ff3f3f';
-        div.style.boxShadow = '0 0 8px rgba(255,63,63,0.2)';
-
-        const violationLog = accViolations.length > 0
-            ? accViolations.map(v =>
-                `<div style="font-size:11px;color:#ff9999;margin-top:2px;">
-                    ⚠ Tried to access <b>${escapeHtml(v.page || 'unknown')}</b>
-                    <span style="color:#555;margin-left:8px;">${new Date(v.time).toLocaleString()}</span>
-                </div>`
-            ).join('')
-            : '<div style="font-size:11px;color:#555;">No violation details recorded</div>';
-
-        div.innerHTML = `
+async function W0kEnydx9q(){
+    const q=(document.getElementById('violation-search').value||'').toLowerCase();
+    const listEl=document.getElementById('violation-list');
+    if(!listEl)return;
+    listEl.innerHTML='<div class="empty-msg">// LOADING... //</div>';
+    const [violations,accounts]=await Promise.all([dbGetViolations(),dbGetAccounts()]);
+    const suspended=accounts.filter(a=>a.suspended&&a.username.toLowerCase()!=='restricted');
+    let entries=suspended.map(acc=>({acc,accViolations:violations.filter(v=>v.username&&v.username.toLowerCase()===acc.username.toLowerCase())}));
+    if(q)entries=entries.filter(e=>e.acc.username.toLowerCase().includes(q)||e.acc.name.toLowerCase().includes(q));
+    if(entries.length===0){listEl.innerHTML='<div class="empty-msg">// NO SECURITY VIOLATIONS //</div>';return;}
+    listEl.innerHTML='';
+    entries.forEach(({acc,accViolations})=>{
+        const div=document.createElement('div');
+        div.className='account-item';
+        div.style.borderColor='#ff3f3f';
+        const vlog=accViolations.length>0
+            ?accViolations.map(v=>`<div style="font-size:11px;color:#ff9999;margin-top:2px;">⚠ ${escapeHtml(v.detail||v.type||'Unknown')} <span style="color:#555;margin-left:8px;">${new Date(v.timestamp).toLocaleString()}</span></div>`).join('')
+            :'<div style="font-size:11px;color:#555;">No details recorded</div>';
+        div.innerHTML=`
             <div class="account-info-top">
                 <div><b>Name:</b> ${escapeHtml(acc.name)} ${getRoleBadge(acc)}</div>
                 <div><b>Username:</b> ${escapeHtml(acc.username)}</div>
-                <div><b>Email:</b> ${escapeHtml(acc.email || '—')}</div>
-                <div style="margin-top:6px;padding-top:6px;border-top:1px solid #2a0000;">
-                    <b style="color:#ff3f3f;">Violations:</b>
-                    ${violationLog}
-                </div>
-                ${acc.suspendReason ? `<div style="font-size:11px;color:#ff3f3f;margin-top:4px;">⛔ Suspended: ${escapeHtml(acc.suspendReason)}</div>` : ''}
-                ${acc.suspendedAt ? `<div style="font-size:11px;color:#555;">At: ${new Date(acc.suspendedAt).toLocaleString()}</div>` : ''}
+                <div><b>Violations:</b>${vlog}</div>
+                ${acc.suspend_reason?`<div style="font-size:11px;color:#ff3f3f;">⛔ ${escapeHtml(acc.suspend_reason)}</div>`:''}
             </div>
             <div class="account-controls-row">
-                <button class="admin-btn" style="border-color:#3fbf3f;color:#3fbf3f;box-shadow:0 0 4px #3fbf3f;"
-                    onclick="hsjaSS8VFg(${index})">✅ REACTIVATE</button>
-                <button class="admin-btn delete" onclick="DG81aSQHqN(${index})">DELETE</button>
+                <button class="admin-btn" style="border-color:#3fbf3f;color:#3fbf3f;" onclick="hsjaSS8VFg('${acc.username}')">✅ REACTIVATE</button>
+                <button class="admin-btn delete" onclick="DG81aSQHqN('${acc.username}')">DELETE</button>
             </div>`;
         listEl.appendChild(div);
     });
 }
 
-function hsjaSS8VFg(index) {
-    let accounts = JSON.parse(localStorage.getItem('approvedAccounts') || '[]');
-    if (!accounts[index]) return;
-    auditLog('REACTIVATE_ACCOUNT', accounts[index].username);
-    accounts[index].suspended = false;
-    delete accounts[index].suspendedAt;
-    delete accounts[index].suspendReason;
-    (window._safeSet || function(k,v){localStorage.setItem(k,JSON.stringify(v));})('approvedAccounts', accounts);
-    W0kEnydx9q();
-    Pgyv1plBAr();
+async function hsjaSS8VFg(username){
+    await dbUpdateAccount(username,{suspended:false,suspend_reason:''});
+    await dbAudit(localStorage.getItem('loggedInUser')||'admin','REACTIVATE_ACCOUNT',username,'');
+    W0kEnydx9q(); Pgyv1plBAr(true);
 }
 
-// ── AUDIT LOG (stub — kept for compatibility) ─────────────────────────────────
-function loadAuditLog() { /* intentionally empty — violations section replaces this */ }
-
-
-// ── SECTION HIDE/SHOW TOGGLE ──────────────────────────────────────────────────
-function toggleSection(listId, btnId) {
-    const list = document.getElementById(listId);
-    const btn  = document.getElementById(btnId);
-    if (!list || !btn) return;
-    const hidden = list.style.display === 'none';
-    list.style.display = hidden ? '' : 'none';
-    btn.innerText = hidden ? '▲ HIDE' : '▼ SHOW';
+function loadAuditLog(){}
+function toggleSection(listId,btnId){
+    const list=document.getElementById(listId),btn=document.getElementById(btnId);
+    if(!list||!btn)return;
+    const hidden=list.style.display==='none';
+    list.style.display=hidden?'':'none';
+    btn.innerText=hidden?'▲ HIDE':'▼ SHOW';
 }
+function _debounce(fn,delay){ var t; return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a);},delay);}; }
+var _debouncedLoad=_debounce(Pgyv1plBAr,200);
 
-// ── DEBOUNCE UTILITY ──────────────────────────────────────────────────────────
-function _debounce(fn, delay) {
-    var timer;
-    return function() {
-        var args = arguments, ctx = this;
-        clearTimeout(timer);
-        timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
-    };
-}
-var _debouncedLoad = _debounce(Pgyv1plBAr, 200);
-
-(async function() {
-    if (window.DB) await DB._initPromise;
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(async function(){
     YDzfOvz1dO();
     Pgyv1plBAr();
     p2eY1gOHaf();
     W0kEnydx9q();
-    loadAuditLog();
-    document.getElementById('teacher-code-input').value = getTeacherCode();
-    // Auto-refresh pending requests when another user registers
-    if (window.DB) {
-        DB.onKVChange('pendingAccounts', function() { p2eY1gOHaf(); });
-        DB.onKVChange('approvedAccounts', function() { Pgyv1plBAr(); });
-    }
+    const code=await dbGetSetting('teacher_code')||'';
+    document.getElementById('teacher-code-input').value=code;
+    startPendingPoll();
 })();
 </script>
 </div>
