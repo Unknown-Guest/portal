@@ -914,7 +914,6 @@ function renderAccountList(subset,listEl,isTeacherList=false){
             <div class="account-controls-row">
                 <span class="star-btn ${entry.favorite?'star-on':'star-off'}" onclick="UEeVVhDIq2('${entry.username}')">★</span>
                 ${makeAccessBtn(entry,'Files')}
-                ${isTeacherList?'':makeAccessBtn(entry,'Hacks')}
                 ${makeAccessBtn(entry,'Console')}
                 ${makeAccessBtn(entry,'Websites')}
                 ${makeAccessBtn(entry,'Tutors')}
