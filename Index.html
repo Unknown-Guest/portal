@@ -603,16 +603,28 @@ async function sendRegistrationRequest() {
         created_at: Date.now()
     });
 
-    // Auto-add to system groups (Welcome + Students or Teachers)
-    const allGroups = await dbGetAllGroups();
-    for (const g of allGroups) {
-        if (!g.permanent) continue;
-        const isTeacherGroup = g.name && g.name.toLowerCase().includes('teacher');
-        const isStudentGroup = g.name && g.name.toLowerCase().includes('student');
-        const isWelcome = g.name && g.name.toLowerCase().includes('welcome');
-        const shouldJoin = isWelcome || (isTeacher && isTeacherGroup) || (!isTeacher && isStudentGroup);
-        if (shouldJoin && Array.isArray(g.members) && !g.members.some(m => m.toLowerCase() === username.toLowerCase())) {
-            await dbUpdateGroup(g.id, { members: [...g.members, username] });
+    // Auto-add to system groups — create them if they don't exist yet
+    async function _ensureGroup(id, name, gtype) {
+        let g = (await dbGetAllGroups()).find(x => x.id === id);
+        if (!g) {
+            g = { id, name, members: [], created_by: 'SYSTEM', created: Date.now(), deleted: false, permanent: true, group_type: gtype };
+            await dbCreateGroup(g);
+        }
+        return g;
+    }
+    const _welcome = await _ensureGroup('permanent_welcome', 'Welcome', 'all');
+    if (!(_welcome.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())) {
+        await dbUpdateGroup('permanent_welcome', { members: [...(_welcome.members||[]), username] });
+    }
+    if (isTeacher) {
+        const _tg = await _ensureGroup('permanent_teachers', 'Teachers', 'teachers');
+        if (!(_tg.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())) {
+            await dbUpdateGroup('permanent_teachers', { members: [...(_tg.members||[]), username] });
+        }
+    } else {
+        const _sg = await _ensureGroup('permanent_students', 'Students', 'students');
+        if (!(_sg.members||[]).map(x=>x.toLowerCase()).includes(username.toLowerCase())) {
+            await dbUpdateGroup('permanent_students', { members: [...(_sg.members||[]), username] });
         }
     }
 
@@ -692,6 +704,9 @@ async function authLogin() {
     const token = crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
     sessionStorage.setItem('_scp_st', token);
     sessionStorage.setItem('_scp_su', match.username);
+    // Also store in localStorage so token survives page navigations
+    localStorage.setItem('_scp_st', token);
+    localStorage.setItem('_scp_su', match.username);
 
     localStorage.setItem('loggedInUser', match.username);
     showStatus('Login successful');
@@ -708,7 +723,7 @@ async function authLogin() {
 
     // If logged in WITH session token, redirect
     const loggedIn = localStorage.getItem('loggedInUser');
-    if (loggedIn && sessionStorage.getItem('_scp_st')) { window.location.href = 'home.html'; return; }
+    if (loggedIn && (sessionStorage.getItem('_scp_st') || localStorage.getItem('_scp_st'))) { window.location.href = 'home.html'; return; }
     if (loggedIn) {
         // Save the departing user's theme so login page shows their colours
         try {

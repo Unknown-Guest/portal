@@ -516,11 +516,18 @@ function aVjArnVgxw() {
 // 5. SESSION TOKEN VALIDATION
 function pkx9NIQ0Wo() {
     const user = localStorage.getItem('loggedInUser');
-    const token = sessionStorage.getItem('_scp_st');
-    const sUser = sessionStorage.getItem('_scp_su');
+    const token = sessionStorage.getItem('_scp_st') || localStorage.getItem('_scp_st');
+    const sUser = sessionStorage.getItem('_scp_su') || localStorage.getItem('_scp_su');
     if (!user || !token) { window.location.href = 'Index.html'; return false; }
+    // Restore sessionStorage from localStorage if it was cleared by navigation
+    if (!sessionStorage.getItem('_scp_st') && token) {
+        sessionStorage.setItem('_scp_st', token);
+        sessionStorage.setItem('_scp_su', sUser || user);
+    }
     if (sUser && sUser.toLowerCase() !== user.toLowerCase()) {
         localStorage.removeItem('loggedInUser');
+        localStorage.removeItem('_scp_st');
+        localStorage.removeItem('_scp_su');
         sessionStorage.clear();
         window.location.href = 'Index.html';
         return false;
@@ -585,7 +592,7 @@ if (document.readyState === 'loading') {
     <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
     <button class="nav-btn" id="admin-nav-btn" onclick="window.location.href='admin.html'" style="display:none;">ADMIN</button>
     <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
-    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');localStorage.removeItem('_scp_st');localStorage.removeItem('_scp_su');sessionStorage.clear();window.location.href='Index.html'">[ LOGOUT ]</button>
 
 <script>
 /* lookup-nav-show-injected */

@@ -96,7 +96,7 @@
     <button class="nav-btn" onclick="window.location.href='messages.html'">MESSAGES</button>
     <button class="nav-btn" id="lookup-nav-btn" onclick="window.location.href='lookup.html'" style="display:none;">LOOKUP</button>
     <button id="nav-refresh" onclick="location.reload()" title="Refresh">⟳</button>
-    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');window.location.href='Index.html'">[ LOGOUT ]</button>
+    <button id="nav-logout" onclick="localStorage.removeItem('loggedInUser');localStorage.removeItem('_scp_st');localStorage.removeItem('_scp_su');sessionStorage.clear();window.location.href='Index.html'">[ LOGOUT ]</button>
 
 <script>
 /* lookup-nav-show-injected Show LOOKUP nav button for teachers, admins, and Restricted */
