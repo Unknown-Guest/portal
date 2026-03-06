@@ -476,16 +476,7 @@ function fnFbmOHnKY() {
     try { localStorage.setItem('_ic', OgTpigTHKb((localStorage.getItem('approvedAccounts') || '[]') + _SALT)); } catch(e) {}
 }
 function aVjArnVgxw() {
-    try {
-        const d = localStorage.getItem('approvedAccounts') || '[]';
-        const stored = localStorage.getItem('_ic');
-        if (stored && OgTpigTHKb(d + _SALT) !== stored) {
-            localStorage.removeItem('loggedInUser');
-            sessionStorage.setItem('_tamper','1');
-            window.location.href = 'Index.html';
-            return false;
-        }
-    } catch(e) {}
+    // approvedAccounts no longer used (Supabase handles auth) — always pass
     return true;
 }
 

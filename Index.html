@@ -709,6 +709,13 @@ async function authLogin() {
     localStorage.setItem('_scp_su', match.username);
 
     localStorage.setItem('loggedInUser', match.username);
+    // Reset integrity checksum so legacy tamper-detection doesn't false-fire
+    // approvedAccounts is now always empty since we use Supabase
+    try {
+        const _emptyHash = (function(d){var h=5381;for(var i=0;i<d.length;i++)h=((h<<5)+h)^d.charCodeAt(i);return(h>>>0).toString(36);})('[]');
+        localStorage.setItem('_ic', _emptyHash);
+        localStorage.removeItem('_hic');
+    } catch(e) {}
     showStatus('Login successful');
     setTimeout(() => { window.location.href = 'home.html'; }, 700);
 }
