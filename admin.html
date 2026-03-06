@@ -682,7 +682,7 @@ if (document.readyState === 'loading') {
         <span style="font-size:10px;color:#888;margin-left:6px;">// Used by teachers during signup</span>
     </div>
     <div style="position:relative;display:inline-flex;align-items:center;">
-        <input id="teacher-code-input" type="password" value="" style="padding:7px 40px 7px 12px;background:#000;border:1px solid var(--scp-green);color:var(--scp-green);font-size:13px;outline:none;min-width:180px;letter-spacing:1px;" placeholder="TEACHER CODE"/>
+        <input id="teacher-code-input" type="password" value="" autocomplete="new-password" style="padding:7px 40px 7px 12px;background:#000;border:1px solid var(--scp-green);color:var(--scp-green);font-size:13px;outline:none;min-width:180px;letter-spacing:1px;" placeholder="TEACHER CODE"/>
         <button onclick="toggleCodeVisibility()" id="code-eye-btn" style="position:absolute;right:8px;background:none;border:none;color:var(--scp-green);cursor:pointer;font-size:14px;opacity:0.7;" title="Show/Hide">👁</button>
     </div>
     <button class="refresh-btn" onclick="f0ee1z6JJc()">💾 SAVE CODE</button>
@@ -694,7 +694,7 @@ if (document.readyState === 'loading') {
     <h2>🔍 USER LOOKUP</h2>
 </div>
 <div style="border:1px solid var(--scp-green);padding:14px 18px;background:#050505;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <input id="lookup-input" style="padding:8px 12px;background:#000;border:1px solid var(--scp-green);color:var(--scp-green);font-size:12px;outline:none;min-width:200px;letter-spacing:1px;" placeholder="ENTER USERNAME..." oninput="Jae24HZKjh()"/>
+    <input id="lookup-input" autocomplete="off" style="padding:8px 12px;background:#000;border:1px solid var(--scp-green);color:var(--scp-green);font-size:12px;outline:none;min-width:200px;letter-spacing:1px;" placeholder="ENTER USERNAME..." oninput="Jae24HZKjh()"/>
     <div id="lookup-result" style="font-size:12px;color:#ddd;letter-spacing:1px;flex:1;min-height:20px;"></div>
 </div>
 
@@ -712,7 +712,7 @@ if (document.readyState === 'loading') {
 <div class="section-header" style="margin-top:40px;">
     <h2>📚 STUDENT ACCOUNTS</h2>
     <div style="display:flex;gap:8px;align-items:center;">
-        <input class="section-search" id="student-search" placeholder="🔍 Search students..." oninput="_debouncedLoad()"/>
+        <input class="section-search" id="student-search" autocomplete="off" placeholder="🔍 Search students..." oninput="_debouncedLoad()"/>
         <button class="refresh-btn" onclick="Pgyv1plBAr()">⟳ REFRESH</button>
         <button class="refresh-btn" id="hide-students-btn" onclick="toggleSection('student-list','hide-students-btn')">▲ HIDE</button>
     </div>
@@ -724,7 +724,7 @@ if (document.readyState === 'loading') {
 <div class="section-header" style="margin-top:40px;">
     <h2>🏫 TEACHER ACCOUNTS</h2>
     <div style="display:flex;gap:8px;align-items:center;">
-        <input class="section-search" id="teacher-search" placeholder="🔍 Search teachers..." oninput="_debouncedLoad()"/>
+        <input class="section-search" id="teacher-search" autocomplete="off" placeholder="🔍 Search teachers..." oninput="_debouncedLoad()"/>
         <button class="refresh-btn" onclick="Pgyv1plBAr()">⟳ REFRESH</button>
         <button class="refresh-btn" id="hide-teachers-btn" onclick="toggleSection('teacher-list','hide-teachers-btn')">▲ HIDE</button>
     </div>
