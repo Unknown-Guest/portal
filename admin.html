@@ -814,6 +814,9 @@ async function YDzfOvz1dO(){
     if(!list)return;
     const pending=await dbGetPending();
     list.innerHTML='';
+    // Accounts now auto-approve — pending queue is only for legacy entries
+    const section=document.getElementById('pending-section');
+    if(section) section.style.display=pending.length===0?'none':'block';
     if(pending.length===0){list.innerHTML='<div class="empty-msg">// NO PENDING REQUESTS //</div>';return;}
     pending.forEach(entry=>{
         const div=document.createElement('div');
