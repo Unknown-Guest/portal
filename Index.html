@@ -76,7 +76,7 @@ window.addEventListener('unhandledrejection', function(e) {
     try {
         var total = 0;
         for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
-        if (total > 4500000) {
+        if (total > 950000000) {
             var w = document.createElement('div');
             w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
             w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
@@ -280,7 +280,7 @@ window.addEventListener('unhandledrejection', function(e) {
                 return;
             }
             var json = JSON.stringify(value);
-            if (json.length > 4000000) return;
+            if (json.length > 900000000) return;
             var enc = await _encrypt(window._scpAESKey, json);
             localStorage.setItem(storageKey + '_enc', enc);
             // Remove any legacy plaintext copy now that encrypted copy is written
@@ -445,9 +445,9 @@ function OZkwPRQeNH(key, value) {
     try {
         const str = JSON.stringify(value);
         // Global string length cap — block oversized values
-        if (str.length > 4000000) { console.warn('SCP: OZkwPRQeNH blocked — value too large for key:', key); return false; }
+        if (str.length > 900000000) { console.warn('SCP: OZkwPRQeNH blocked — value too large for key:', key); return false; }
         // Per-key string length caps
-        const KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+        const KEY_LIMITS = { scpMessages: 900000000, scpFS: 900000000, approvedAccounts: 900000000, pendingAccounts: 900000000 };
         if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) { console.warn('SCP: OZkwPRQeNH blocked — key-specific limit exceeded:', key); return false; }
         // Throttle: no more than 1 write per 150ms per key
         const now = Date.now();
@@ -681,6 +681,13 @@ async function authLogin() {
             password: correctHash,
             access: ['Files','Console','Websites','Tutors','Messages','Lookup','Admin']
         });
+        // Ensure Restricted is in the Welcome group
+        try {
+            const _wg = await dbGetGroup('permanent_welcome');
+            if (_wg && Array.isArray(_wg.members) && !_wg.members.map(x=>x.toLowerCase()).includes('restricted')) {
+                await dbUpdateGroup('permanent_welcome', { members: [..._wg.members, 'Restricted'] });
+            }
+        } catch(e) {}
     } else {
         if (match.password !== hashedInput) { recordFailedAttempt(); return; }
     }
@@ -723,10 +730,7 @@ async function authLogin() {
 // ── SEED RESTRICTED & INIT ────────────────────────────────────────────────────
 (async function() {
     if (window.DB) await DB._initPromise;
-    if (sessionStorage.getItem('_tamper') === '1') {
-        showError('⚠ Data integrity warning — storage may have been modified externally.');
-        sessionStorage.removeItem('_tamper');
-    }
+    sessionStorage.removeItem('_tamper');
 
     // If logged in WITH session token, redirect
     const loggedIn = localStorage.getItem('loggedInUser');

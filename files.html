@@ -139,7 +139,7 @@ window.addEventListener('unhandledrejection', function(e) {
     try {
         var total = 0;
         for (var k in localStorage) if (localStorage.hasOwnProperty(k)) total += (localStorage[k]||'').length;
-        if (total > 4500000) {
+        if (total > 950000000) {
             var w = document.createElement('div');
             w.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#1a0a00;color:#ffcc00;font-size:10px;letter-spacing:1.5px;padding:5px 14px;text-align:center;font-family:Arial,sans-serif;border-top:1px solid #ffcc00;';
             w.innerText = '⚠ STORAGE NEARLY FULL (' + Math.round(total/1024) + 'KB / ~5120KB) — Export a backup in Home settings.';
@@ -453,14 +453,14 @@ window.addEventListener('unhandledrejection', function(e) {
     if (window._scpSafeSetReady) return; // don't double-init
     window._scpSafeSetReady = true;
     var _throttle = {};
-    var KEY_LIMITS = { scpMessages: 3500000, scpFS: 3500000, approvedAccounts: 500000, pendingAccounts: 200000 };
+    var KEY_LIMITS = { scpMessages: 900000000, scpFS: 900000000, approvedAccounts: 900000000, pendingAccounts: 900000000 };
     window.xJRcoreogr = function(key, fallback) {
         try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch(e) { return fallback; }
     };
     window.OZkwPRQeNH = function(key, value) {
         try {
             var str = JSON.stringify(value);
-            if (str.length > 4000000) return false;
+            if (str.length > 900000000) return false;
             if (KEY_LIMITS[key] && str.length > KEY_LIMITS[key]) return false;
             var now = Date.now();
             if (_throttle[key] && now - _throttle[key] < 150) return true;
@@ -542,7 +542,7 @@ window._safeGet = function(key, fallback) {
 window._safeSet = function(key, value) {
     try {
         const str = JSON.stringify(value);
-        if (str.length > 4000000) return false;
+        if (str.length > 900000000) return false;
         _origSetItem(key, str);
         if (key === 'approvedAccounts') fnFbmOHnKY();
         return true;
