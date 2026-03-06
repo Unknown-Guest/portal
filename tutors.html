@@ -773,9 +773,12 @@ const TAB_GRADES = { y7:7, y8:8, y9:9, y10:10, y11:11, y12:12, certs:99 };
 
 function computeGrade(user) {
     if (!user || user.role === 'teacher') return 'teacher';
-    if (!user.initialGrade || !user.gradeYear) return 7;
-    const elapsed = new Date().getFullYear() - user.gradeYear;
-    const g = user.initialGrade + elapsed;
+    // Support both snake_case (Supabase) and camelCase (legacy)
+    const ig = user.initial_grade || user.initialGrade;
+    const gy = user.grade_year || user.gradeYear;
+    if (!ig || !gy) return 7;
+    const elapsed = new Date().getFullYear() - gy;
+    const g = ig + elapsed;
     if (g > 12) return 'graduated';
     return Math.min(g, 12);
 }

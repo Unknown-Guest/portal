@@ -582,9 +582,14 @@ async function sendRegistrationRequest() {
     const hashedPw = await hashPassword(password);
 
     // Auto-approve — insert directly into accounts (no admin approval needed)
-    const defaultAccess = role === 'teacher'
-        ? ['Files','Console','Websites','Tutors','Messages','Lookup']
-        : ['Files','Console','Websites','Tutors','Messages'];
+    let defaultAccess;
+    if (role === 'teacher') {
+        defaultAccess = ['Files','Console','Websites','Tutors','Messages','Lookup'];
+    } else {
+        defaultAccess = ['Files','Console','Websites','Tutors','Messages'];
+        // Year 9 and above get Hacks access
+        if (initialGrade && initialGrade >= 9) defaultAccess.push('Hacks');
+    }
 
     await dbUpsertAccount({
         username, name,
@@ -597,6 +602,19 @@ async function sendRegistrationRequest() {
         suspended: false, deleted: false,
         created_at: Date.now()
     });
+
+    // Auto-add to system groups (Welcome + Students or Teachers)
+    const allGroups = await dbGetAllGroups();
+    for (const g of allGroups) {
+        if (!g.permanent) continue;
+        const isTeacherGroup = g.name && g.name.toLowerCase().includes('teacher');
+        const isStudentGroup = g.name && g.name.toLowerCase().includes('student');
+        const isWelcome = g.name && g.name.toLowerCase().includes('welcome');
+        const shouldJoin = isWelcome || (isTeacher && isTeacherGroup) || (!isTeacher && isStudentGroup);
+        if (shouldJoin && Array.isArray(g.members) && !g.members.some(m => m.toLowerCase() === username.toLowerCase())) {
+            await dbUpdateGroup(g.id, { members: [...g.members, username] });
+        }
+    }
 
     showStatus('Account created! You can now log in.');
     setTimeout(() => { _resetForm(); }, 1800);
