@@ -443,6 +443,7 @@ window.addEventListener('unhandledrejection', function(e) {
 </script>
 
 <script src="db.js"></script>
+<script src="scp_supabase.js"></script>
 </head>
 <body>
 
@@ -1105,12 +1106,13 @@ window.onload = async function() { if(window.DB) await DB._initPromise;
     const username = localStorage.getItem("loggedInUser");
     if (!username) { window.location.href = "Index.html"; return; }
     const _access = JSON.parse(localStorage.getItem('_scp_access') || '[]');
-    currentUserData = { username, access: _access };
     if (!_access.includes('Tutors') && username.toLowerCase() !== 'restricted') {
         document.getElementById("main").innerHTML =
             '<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:12px;letter-spacing:1.5px;color:var(--scp-green-soft);opacity:0.5;">// ACCESS DENIED //</div>';
         return;
     }
+    // Fetch full account from Supabase to get grade info
+    currentUserData = await dbGetAccount(username) || { username, access: _access };
     userComputedGrade = computeGrade(currentUserData);
     // Auto-set initial tab to user's grade
     if (currentUserData.role !== 'teacher' && userComputedGrade !== 'graduated') {

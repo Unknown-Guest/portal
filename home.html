@@ -1168,9 +1168,10 @@ function loadThemePickers() {
 async function confirmDeleteAccount() {
     // Remove from all groups in Supabase
     const allGroups = await dbGetAllGroups();
+    const _cu = currentUser.toLowerCase();
     for (const g of allGroups) {
-        if (Array.isArray(g.members) && g.members.some(m => m.toLowerCase() === currentUser)) {
-            await dbUpdateGroup(g.id, { members: g.members.filter(m => m.toLowerCase() !== currentUser) });
+        if (Array.isArray(g.members) && g.members.some(m => m.toLowerCase() === _cu)) {
+            await dbUpdateGroup(g.id, { members: g.members.filter(m => m.toLowerCase() !== _cu) });
         }
     }
     // Soft-delete the account in Supabase
@@ -1184,8 +1185,8 @@ async function confirmDeleteAccount() {
 
 window.onload = async function() {
     const user = localStorage.getItem("loggedInUser");
-    if (!user || !sessionStorage.getItem('_scp_st')) { window.location.href = "Index.html"; return; }
-    currentUser = user.toLowerCase();
+    if (!user) { window.location.href = "Index.html"; return; }
+    currentUser = user;
     await loadDetails();
     loadThemePickers();
     updateStorageUsage();
