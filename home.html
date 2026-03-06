@@ -829,7 +829,7 @@ if (document.readyState === 'loading') {
             <div class="section-title">CHANGE USERNAME</div>
             <div class="field-wrap">
                 <label class="field-lbl">NEW USERNAME</label>
-                <input class="field-input" id="new-username" placeholder="NEW_USERNAME" maxlength="20" autocomplete="off"/>
+                <input class="field-input" id="new-username" placeholder="NEW_USERNAME" maxlength="20" autocomplete="new-password" name="new-username-field" type="text"/>
             </div>
             <div class="field-wrap">
                 <label class="field-lbl">CURRENT PASSWORD (to confirm)</label>
@@ -958,11 +958,24 @@ async function saveAccount(updates) {
 
 async function loadDetails() {
     const a = await getAccount();
-    if (!a) return;
+    if (!a) {
+        // Retry once after short delay in case Supabase was slow
+        await new Promise(r => setTimeout(r, 600));
+        const retry = await getAccount();
+        if (!retry) return;
+        document.getElementById("disp-name").innerText = retry.name || "—";
+        document.getElementById("disp-username").innerText = retry.username || "—";
+        document.getElementById("disp-email").innerText = retry.email || "—";
+        document.getElementById("disp-password").innerText = "•".repeat((retry.password || "").length);
+        return;
+    }
     document.getElementById("disp-name").innerText = a.name || "—";
     document.getElementById("disp-username").innerText = a.username || "—";
     document.getElementById("disp-email").innerText = a.email || "—";
     document.getElementById("disp-password").innerText = "•".repeat((a.password || "").length);
+    // Clear the change-username field so it doesn't show current username
+    const unField = document.getElementById("new-username");
+    if (unField) unField.value = "";
 }
 
 function setStatus(id, msg, ok) {
