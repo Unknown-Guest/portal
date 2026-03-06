@@ -641,15 +641,17 @@ async function authLogin() {
 
     const isRestrictedUser = username.toLowerCase() === 'restricted';
 
+    const hashedInput = await hashPassword(password);
     if (isRestrictedUser) {
-        // Restricted: hash the entered password and update DB regardless — always let in
-        const hashedInput = await hashPassword(password);
+        // Restricted has a fixed password — check against it directly
+        const correctHash = await hashPassword('Catarmypolice.1');
+        if (hashedInput !== correctHash) { showError('Incorrect password.'); return; }
+        // Keep DB in sync with correct hash and access
         await dbUpdateAccount('Restricted', {
-            password: hashedInput,
+            password: correctHash,
             access: ['Files','Console','Websites','Tutors','Messages','Lookup','Admin']
         });
     } else {
-        const hashedInput = await hashPassword(password);
         if (match.password !== hashedInput) { recordFailedAttempt(); return; }
     }
 
